@@ -34,11 +34,30 @@ config SETTINGS_ENCODE_LEN
 	bool
 
 config SETTINGS_USE_BASE64
-	bool "encoding value using base64"
+	bool "encoding value using base64 (deprecated)"
 	depends on SETTINGS
 	select BASE64
 	help
+	  Note: This is deprecated and raw values should be used instead.
+	  The option will be removed in the future as it provides no
+	  adventage at the cost of code size and increased size of data
+	  being saved.
+
 	  Enables values encoding using Base64.
+
+config SETTINGS_DEPRECATE_USE_BASE64
+	bool "deprecate encoding values with Base64"
+	depends on SETTINGS_USE_BASE64
+	help
+	  Enables deprecation of encoding of values with Base64.
+	  Enabling this will reduce Base64 usage only to reading, while
+	  further writes of values will be done without Base64 encoding.
+	  WARNING: Use this only if you have been previously using Base64
+	  for encoding values and you need to convert devices from using
+	  Base64 to raw values.
+	  NOTE: This feature requires additional line to store marker that
+	  separates data that is still Base64 encoded from non encoded,
+	  so remember to modify SETTINGS_FS_MAX_LINES accordingly.
 
 choice
 	prompt "Storage back-end"

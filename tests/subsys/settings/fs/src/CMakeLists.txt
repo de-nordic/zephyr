@@ -10,3 +10,8 @@ add_dependencies(    settings_test_fs offsets_h)
 
 FILE(GLOB fssources *.c )
 zephyr_library_sources(${fssources})
+
+if (CONFIG_SETTINGS_DEPRECATE_USE_BASE64)
+	FILE(GLOB debase64_sources debase64/*.c )
+	zephyr_library_sources(${debase64_sources})
+endif()

@@ -17,6 +17,15 @@
 extern "C" {
 #endif
 
+#define NOB64_MARKER    "_sys/nob64"
+
+#if defined(CONFIG_SETTINGS_USE_BASE64)
+#if !defined(CONFIG_SETTINGS_DEPRECATE_USE_BASE64)
+#define SETTINGS_USE_BASE64_WRITE
+#endif
+#define SETTINGS_USE_BASE64_READ
+#endif
+
 int settings_cli_register(void);
 int settings_nmgr_register(void);
 
@@ -64,6 +73,7 @@ struct line_entry_ctx {
 	void *stor_ctx;
 	off_t seek; /* offset of id-value pair within the file */
 	size_t len; /* len of line without len value */
+	off_t b64_marker;
 };
 
 int settings_next_line_ctx(struct line_entry_ctx *entry_ctx);

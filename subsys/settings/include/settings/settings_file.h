@@ -21,6 +21,10 @@ struct settings_file {
 	const char *cf_name;	/* filename */
 	int cf_maxlines;	/* max # of lines before compressing */
 	int cf_lines;		/* private */
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+	/* True if marker has already been placed in file */
+	bool cf_b64_marker;
+#endif
 };
 
 /* register file to be source of settings */

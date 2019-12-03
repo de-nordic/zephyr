@@ -26,6 +26,10 @@ static int settings_file_load(struct settings_store *cs,
 			      const struct settings_load_arg *arg);
 static int settings_file_save(struct settings_store *cs, const char *name,
 			      const char *value, size_t val_len);
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+static int settings_file_save_b64_marker(struct settings_file *sf,
+					 struct line_entry_ctx *lec);
+#endif
 
 static const struct settings_store_itf settings_file_itf = {
 	.csi_load = settings_file_load,
@@ -118,7 +122,10 @@ static int settings_file_load_priv(struct settings_store *cs, line_load_cb cb,
 	struct line_entry_ctx entry_ctx = {
 		.stor_ctx = (void *)&file,
 		.seek = 0,
-		.len = 0 /* unknown length */
+		.len = 0, /* unknown length */
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+		.b64_marker = false
+#endif
 	};
 
 	lines = 0;
@@ -146,7 +153,19 @@ static int settings_file_load_priv(struct settings_store *cs, line_load_cb cb,
 		}
 		name[name_len] = '\0';
 
-		if (filter_duplicates &&
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+		/* If Base64 depreciation marker has not been found yet,
+		 * check for it and mark its position if found.
+		 */
+		if (entry_ctx.b64_marker == false &&
+		    (name_len == (sizeof(NOB64_MARKER) - 1)) &&
+		    strncmp(name, NOB64_MARKER, name_len) == 0) {
+			entry_ctx.b64_marker = true;
+			pass_entry = false;
+		}
+#endif
+
+		if (pass_entry && filter_duplicates &&
 		    (!read_entry_len(&entry_ctx, name_len+1) ||
 		     settings_file_check_duplicate(&entry_ctx, name))) {
 			pass_entry = false;
@@ -226,7 +245,10 @@ static int settings_file_save_and_compress(struct settings_file *cf,
 	struct line_entry_ctx loc1 = {
 		.stor_ctx = &rf,
 		.seek = 0,
-		.len = 0 /* unknown length */
+		.len = 0, /* unknown length */
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+		.b64_marker = false
+#endif
 	};
 
 	struct line_entry_ctx loc2;
@@ -254,6 +276,15 @@ static int settings_file_save_and_compress(struct settings_file *cf,
 	lines = 0;
 	new_name_len = strlen(name);
 
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+	/* Write marker to the new file */
+	cf->cf_b64_marker = false;
+	if (settings_file_save_b64_marker(cf, &loc3) != 0) {
+		goto end_rolback;
+	}
+#endif
+
+
 	while (1) {
 		rc = settings_next_line_ctx(&loc1);
 
@@ -275,6 +306,13 @@ static int settings_file_save_and_compress(struct settings_file *cf,
 			/* the oldest sector */
 			continue;
 		}
+
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+		/* Do not copy noBASE64 marker */
+		if (!memcmp(name1, NOB64_MARKER, val1_off)) {
+			continue;
+		}
+#endif
 
 		/* avoid copping value which will be overwritten by new value*/
 		if ((val1_off == new_name_len) &&
@@ -355,6 +393,37 @@ end_rolback:
 
 }
 
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+/**
+ * @brief Writes Base64 depreciation marker line
+ *
+ * Function will write Base64 depreciation marker line and store the offset
+ * of marker within settings_file structure so it that can be used in
+ * further readd to decide if base64 decoding should be used.
+ *
+ * @param sf	The settings_file context
+ * @param lec	The current line context
+ *
+ * @retval	error code
+ */
+static int settings_file_save_b64_marker(struct settings_file *sf,
+					 struct line_entry_ctx *lec)
+{
+	int rc = 0;
+	u8_t data = 1;
+
+	if (sf->cf_b64_marker == false) {
+		rc = settings_line_write(NOB64_MARKER, &data, sizeof(data),
+					 0, lec);
+		if  (rc == 0) {
+			sf->cf_b64_marker = true;
+			sf->cf_lines++;
+		}
+	}
+	return rc;
+}
+#endif
+
 static int settings_file_save_priv(struct settings_store *cs, const char *name,
 				   const char *value, size_t val_len)
 {
@@ -385,11 +454,20 @@ static int settings_file_save_priv(struct settings_store *cs, const char *name,
 		rc = fs_seek(&file, 0, FS_SEEK_END);
 		if (rc == 0) {
 			entry_ctx.stor_ctx = &file;
-			rc = settings_line_write(name, value, val_len, 0,
-						  (void *)&entry_ctx);
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+			rc = settings_file_save_b64_marker(cf, &entry_ctx);
+
 			if (rc == 0) {
-				cf->cf_lines++;
+#endif
+				rc = settings_line_write(name, value,
+					val_len, 0, &entry_ctx);
+
+				if (rc == 0) {
+					cf->cf_lines++;
+				}
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
 			}
+#endif
 		}
 
 		rc2 = fs_close(&file);
@@ -500,7 +578,10 @@ int settings_backend_init(void)
 {
 	static struct settings_file config_init_settings_file = {
 		.cf_name = CONFIG_SETTINGS_FS_FILE,
-		.cf_maxlines = CONFIG_SETTINGS_FS_MAX_LINES
+		.cf_maxlines = CONFIG_SETTINGS_FS_MAX_LINES,
+#ifdef CONFIG_SETTINGS_DEPRECATE_USE_BASE64
+		.cf_b64_marker = false
+#endif
 	};
 	int rc;
 

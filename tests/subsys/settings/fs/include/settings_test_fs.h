@@ -57,6 +57,9 @@ void test_config_multiple_in_file(void);
 void test_config_save_in_file(void);
 void test_config_save_one_file(void);
 void test_config_compress_file(void);
+void test_config_small_file_debase64(void);
+void test_config_write_debase64(void);
+void test_config_compress_debase64(void);
 
 #ifdef __cplusplus
 }
