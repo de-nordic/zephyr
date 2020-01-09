@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: de-nordic
+      url-base: https://github.com/de-nordic
 
   #
   # Please add items below based on alphabetical order
@@ -77,8 +79,9 @@ manifest:
       revision: c2bd757332bfde11c27019f937b0c61d5e9b9fd9
       path: bootloader/mcuboot
     - name: mcumgr
-      revision: b18b3d16441f40cf983aa034258e8f7c97bfe9bf
+      remote: de-nordic
       path: modules/lib/mcumgr
+      revision: mynewt-tinycbor
     - name: net-tools
       revision: 30b7efa827b04d2e47840716b0372737fe7d6c92
       path: tools/net-tools
@@ -98,8 +101,9 @@ manifest:
       revision: 6fcf61606d6012d2c44129edc033f59331e268bc
       path: modules/debug/segger
     - name: tinycbor
+      remote: de-nordic
       path: modules/lib/tinycbor
-      revision: 0fc68fceacd1efc1ce809c5880c380f3d98b7b6e
+      revision: mynewt-tinycbor
     - name: littlefs
       path: modules/fs/littlefs
       revision: fe9572dd5a9fcf93a249daa4233012692bd2881d
