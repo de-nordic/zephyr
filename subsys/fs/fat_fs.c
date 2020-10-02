@@ -201,7 +201,7 @@ static ssize_t fatfs_write(struct fs_file_t *zfp, const void *ptr, size_t size)
 	return res;
 }
 
-static int fatfs_seek(struct fs_file_t *zfp, off_t offset, int whence)
+static off_t fatfs_seek(struct fs_file_t *zfp, off_t offset, int whence)
 {
 	FRESULT res = FR_OK;
 	off_t pos;
@@ -225,6 +225,13 @@ static int fatfs_seek(struct fs_file_t *zfp, off_t offset, int whence)
 	}
 
 	res = f_lseek(zfp->filep, pos);
+	if (res >= 0) {
+		pos = f_tell((FIL *)zfp->filep);
+		if (pos < 0) {
+			return translate_error(pos);
+		}
+		return pos;
+	}
 
 	return translate_error(res);
 }
