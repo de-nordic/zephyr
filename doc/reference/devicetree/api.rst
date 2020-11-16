@@ -332,6 +332,8 @@ the source code to specify a device name.
    * - zephyr,code-partition
      - Flash partition that the Zephyr image's text section should be linked
        into
+   * - zephyr,dfu-code-partition
+     - Flash partition that will be target for DFU of appication
    * - zephyr,console
      - Sets default :option:`CONFIG_UART_CONSOLE_ON_DEV_NAME`
    * - zephyr,dtcm
