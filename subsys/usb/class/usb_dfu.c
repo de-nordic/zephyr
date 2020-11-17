@@ -52,6 +52,8 @@
 #include <usb/class/usb_dfu.h>
 #include <usb_descriptor.h>
 #include <usb_work_q.h>
+#include <devicetree.h>
+#include <devicetree/fixed-partitions.h>
 
 #define LOG_LEVEL CONFIG_USB_DEVICE_LOG_LEVEL
 #include <logging/log.h>
@@ -61,8 +63,21 @@ LOG_MODULE_REGISTER(usb_dfu);
 
 #define USB_DFU_MAX_XFER_SIZE		CONFIG_USB_REQUEST_BUFFER_SIZE
 
-#define FIRMWARE_IMAGE_0_LABEL "image-0"
-#define FIRMWARE_IMAGE_1_LABEL "image-1"
+#define RUNNING_FLASH_IMG		DT_CHOSEN(zephyr_code_partition)
+#define RUNNING_FLASH_IMG_ID		DT_FIXED_PARTITION_ID(RUNNING_FLASH_IMG)
+#define RUNNING_FLASH_IMG_LABEL		DT_PROP(RUNNING_FLASH_IMG, label)
+
+#if DT_HAS_CHOSEN(zephyr_dfu_code_partition)
+#define UPDATEABLE_FLASH_IMG		DT_CHOSEN(zephyr_dfu_code_partition)
+#define UPDATEABLE_FLASH_IMG_ID		DT_FIXED_PARTITION_ID(UPDATEABLE_FLASH_IMG)
+#define UPDATEABLE_FLASH_IMG_LABEL	DT_PROP(UPDATEABLE_FLASH_IMG, label)
+#endif
+
+#if defined(UPDATEABLE_FLASH_IMG)
+#define UPLOAD_FLASH_AREA_ID		UPDATEABLE_FLASH_IMG_ID
+#else
+#define UPLOAD_FLASH_AREA_ID		RUNNING_FLASH_IMG_ID
+#endif
 
 /* MCUBoot waits for CONFIG_USB_DFU_WAIT_DELAY_MS time in total to let DFU to
  * be commenced. It intermittently checks every INTERMITTENT_CHECK_DELAY
@@ -123,7 +138,7 @@ struct dev_dfu_mode_descriptor {
 	struct usb_cfg_descriptor cfg_descr;
 	struct usb_sec_dfu_config {
 		struct usb_if_descriptor if0;
-#if FLASH_AREA_LABEL_EXISTS(image_1)
+#if defined(UPDATEABLE_FLASH_IMG)
 		struct usb_if_descriptor if1;
 #endif
 		struct dfu_runtime_descriptor dfu_descr;
@@ -174,7 +189,7 @@ struct dev_dfu_mode_descriptor dfu_mode_desc = {
 			.bInterfaceProtocol = DFU_MODE_PROTOCOL,
 			.iInterface = 4,
 		},
-#if FLASH_AREA_LABEL_EXISTS(image_1)
+#if defined(UPDATEABLE_FLASH_IMG)
 		.if1 = {
 			.bLength = sizeof(struct usb_if_descriptor),
 			.bDescriptorType = USB_INTERFACE_DESC,
@@ -227,14 +242,14 @@ struct usb_string_desription {
 	struct image_0_descriptor {
 		uint8_t bLength;
 		uint8_t bDescriptorType;
-		uint8_t bString[USB_BSTRING_LENGTH(FIRMWARE_IMAGE_0_LABEL)];
+		uint8_t bString[USB_BSTRING_LENGTH(RUNNING_FLASH_IMG_LABEL)];
 	} __packed utf16le_image0;
 
-#if FLASH_AREA_LABEL_EXISTS(image_1)
+#if defined(UPDATEABLE_FLASH_IMG)
 	struct image_1_descriptor {
 		uint8_t bLength;
 		uint8_t bDescriptorType;
-		uint8_t bString[USB_BSTRING_LENGTH(FIRMWARE_IMAGE_1_LABEL)];
+		uint8_t bString[USB_BSTRING_LENGTH(UPDATEABLE_FLASH_IMG_LABEL)];
 	} __packed utf16le_image1;
 #endif
 } __packed;
@@ -269,17 +284,17 @@ struct usb_string_desription string_descr = {
 	/* Image 0 String Descriptor */
 	.utf16le_image0 = {
 		.bLength = USB_STRING_DESCRIPTOR_LENGTH(
-				FIRMWARE_IMAGE_0_LABEL),
+				RUNNING_FLASH_IMG_LABEL),
 		.bDescriptorType = USB_STRING_DESC,
-		.bString = FIRMWARE_IMAGE_0_LABEL,
+		.bString = RUNNING_FLASH_IMG_LABEL,
 	},
-#if FLASH_AREA_LABEL_EXISTS(image_1)
+#if defined(UPDATEABLE_FLASH_IMG)
 	/* Image 1 String Descriptor */
 	.utf16le_image1 = {
 		.bLength = USB_STRING_DESCRIPTOR_LENGTH(
-				FIRMWARE_IMAGE_1_LABEL),
+				UPDATEABLE_FLASH_IMG_LABEL),
 		.bDescriptorType = USB_STRING_DESC,
-		.bString = FIRMWARE_IMAGE_1_LABEL,
+		.bString = UPDATEABLE_FLASH_IMG_LABEL,
 	},
 #endif
 };
@@ -305,12 +320,6 @@ struct dfu_data_t {
 	uint16_t block_nr;                 /* DFU block number */
 	uint16_t bwPollTimeout;
 };
-
-#if FLASH_AREA_LABEL_EXISTS(image_1)
-	#define UPLOAD_FLASH_AREA_ID FLASH_AREA_ID(image_1)
-#else
-	#define UPLOAD_FLASH_AREA_ID FLASH_AREA_ID(image_0)
-#endif
 
 
 static struct dfu_data_t dfu_data = {
@@ -344,7 +353,7 @@ static void dfu_reset_counters(void)
 {
 	dfu_data.bytes_sent = 0U;
 	dfu_data.block_nr = 0U;
-	if (flash_img_init(&dfu_data.ctx)) {
+	if (flash_img_init_id(&dfu_data.ctx, UPDATEABLE_FLASH_IMG_ID)) {
 		LOG_ERR("flash img init error");
 		dfu_data.state = dfuERROR;
 		dfu_data.status = errUNKNOWN;
@@ -683,12 +692,12 @@ static int dfu_custom_handle_req(struct usb_setup_packet *pSetup,
 			switch (pSetup->wValue) {
 			case 0:
 				dfu_data.flash_area_id =
-				    FLASH_AREA_ID(image_0);
+				    RUNNING_FLASH_IMG_ID;
 				break;
-#if FLASH_AREA_LABEL_EXISTS(image_1)
+#if defined(UPDATEABLE_FLASH_IMG)
 			case 1:
 				dfu_data.flash_area_id =
-				    UPLOAD_FLASH_AREA_ID;
+				    UPDATEABLE_FLASH_IMG_ID;
 				break;
 #endif
 			default:
@@ -761,7 +770,7 @@ static void dfu_work_handler(struct k_work *item)
  * image collection, so not erase whole bank at DFU beginning
  */
 #ifndef CONFIG_IMG_ERASE_PROGRESSIVELY
-		if (boot_erase_img_bank(UPLOAD_FLASH_AREA_ID)) {
+		if (boot_erase_img_bank(UPDATEABLE_FLASH_IMG_ID)) {
 			dfu_data.state = dfuERROR;
 			dfu_data.status = errERASE;
 			break;
