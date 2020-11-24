@@ -21,6 +21,7 @@ import shlex
 import shutil
 import signal
 import subprocess
+import re
 from typing import Dict, List, NamedTuple, NoReturn, Optional, Set, Type, \
     Union
 
@@ -128,6 +129,7 @@ class BuildConfiguration:
     def __init__(self, build_dir: str):
         self.build_dir = build_dir
         self.options: Dict[str, Union[str, int]] = {}
+        self.path = os.path.join(self.build_dir, 'zephyr', '.config')
         self._init()
 
     def __contains__(self, item):
@@ -140,25 +142,55 @@ class BuildConfiguration:
         return self.options.get(option, *args)
 
     def _init(self):
-        self._parse(os.path.join(self.build_dir, 'zephyr', '.config'))
+        self._parse(self.path)
 
     def _parse(self, filename: str):
-        with open(filename, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                option, value = line.split('=', 1)
-                self.options[option] = self._parse_value(value)
+        # Matches any line, commented out or not, that contains option name
+        # beginning with CONFIG_ add concluded with = followed by, what is
+        # considered, a value or 'is not set' string.
+        # This allows to detect:
+        #   - options commented out by hand: prefix != None and value != None
+        #   - unset options: when prefix != None and value == None
+        #   - enabled/set options: prefix == None and value != None
+        parser = re.compile("^(?P<prefix>#?)[ \t]*(?P<option>CONFIG_[a-zA-Z0-9_]+)(=(?P<value>.*)| is not set)$")
 
-    @staticmethod
-    def _parse_value(value):
-        if value.startswith('"') or value.startswith("'"):
-            return value.split()
-        try:
-            return int(value, 0)
-        except ValueError:
-            return value
+        with open(filename, 'r') as f:
+            for line in f.readlines():
+                line = line.strip()
+                match = parser.match(line)
+
+                # Skip commented out lines that are not fitting the pattern
+                if not match:
+                    continue
+
+                value = match.group('value')
+
+                # Case when line is not commented but value could not be
+                # extracted.
+                if not match.group('prefix') and not value:
+                    _logger.warning("could not extract value from line " + line)
+                    continue
+
+                # If value not set then it is 'n'
+                if not value:
+                    value = 'n'
+                else:
+                    value = value.strip()
+
+                # Value conversions; 'y'/'n' and strings are assigned as they
+                # are; all others are passed for conversion to numbers.
+                if value in ('y', 'n'):
+                    ready_value: Union[int, str] = value
+                elif value.startswith('"') and value.endswith('"'):
+                    ready_value = value[1:-1]
+                else:
+                    try:
+                        base = 16 if value.startswith('0x') else 10
+                        ready_value = int(value, base=base)
+                    except ValueError:
+                        _logger.warning("strange value in line " + line)
+
+                self.options[match.group('option')] = ready_value
 
 
 class MissingProgram(FileNotFoundError):
