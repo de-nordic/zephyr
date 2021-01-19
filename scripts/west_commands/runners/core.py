@@ -145,30 +145,49 @@ class BuildConfiguration:
         self._parse(self.path)
 
     def _parse(self, filename: str):
-        opt_value = re.compile('^(?P<option>CONFIG_[A-Za-z0-9_]+)=(?P<value>.*)$')
-        not_set = re.compile('^# (?P<option>CONFIG_[A-Za-z0-9_]+) is not set$')
+        # Matches any line, commented out or not, that contains option name
+        # beginning with CONFIG_ add concluded with = followed by, what is
+        # considered, a value or 'is not set' string.
+        # This allows to detect:
+        #   - options commented out by hand: prefix != None and value != None
+        #   - unset options: when prefix != None and value == None
+        #   - enabled/set options: prefix == None and value != None
+        parser = re.compile("^(?P<prefix># )?(?P<option>CONFIG_[a-zA-Z0-9_]+)(=(?P<value>.*)| is not set)$")
 
         with open(filename, 'r') as f:
-            lines = f.readlines()
+            for line in f:
+                match = parser.match(line)
 
-        for line in lines:
-            match = opt_value.match(line)
-            if match:
+                # Skip commented out lines that are not fitting the pattern
+                if not match:
+                    continue
+
                 value = match.group('value')
-                if value.startswith('"') and value.endswith('"'):
-                    value = value[1:-1]
+
+                # Case when line is not commented but value could not be
+                # extracted.
+                if not match.group('prefix') and not value:
+                    _logger.warning("could not extract value from line " + line)
+                    continue
+
+                # If value not set then it is 'n'
+                if not value:
+                    value = 'n'
+
+                # Value conversions; 'y'/'n' and strings are assigned as they
+                # are; all others are passed for conversion to numbers.
+                if value in ('y', 'n'):
+                    ready_value: Union[int, str] = value
+                elif value.startswith('"') and value.endswith('"'):
+                    ready_value = value[1:-1]
                 else:
                     try:
                         base = 16 if value.startswith('0x') else 10
-                        value = int(value, base=base)
+                        ready_value = int(value, base=base)
                     except ValueError:
-                        pass
+                        _logger.warning("strange value in line " + line)
 
-                self.options[match.group('option')] = value
-
-            match = not_set.match(line)
-            if match:
-                self.options[match.group('option')] = 'n'
+                self.options[match.group('option')] = ready_value
 
 class MissingProgram(FileNotFoundError):
     '''FileNotFoundError subclass for missing program dependencies.
