@@ -163,6 +163,7 @@ class BuildConfiguration:
                             pass
 
                     self.options[match.group('option')] = value
+                    continue
 
                 match = not_set.match(line)
                 if match:
