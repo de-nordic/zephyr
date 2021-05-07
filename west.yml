@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: de-nordic
+      url-base: https://github.com/de-nordic
 
   #
   # Please add items below based on alphabetical order
@@ -125,8 +127,9 @@ manifest:
       path: modules/crypto/tinycrypt
       revision: 3e9a49d2672ec01435ffbf0d788db6d95ef28de0
     - name: littlefs
+      remote: de-nordic
       path: modules/fs/littlefs
-      revision: 9e4498d1c73009acd84bb36036ee5e2869112a6c
+      revision: d4d707fd47d61ae1675b2caa91ebfe842c0be29c
     - name: mipi-sys-t
       path: modules/debug/mipi-sys-t
       revision: 75e671550ac1acb502f315fe4952514dc73f7bfb
