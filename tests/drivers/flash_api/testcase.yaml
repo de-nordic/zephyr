@@ -1,0 +1,16 @@
+#
+# Copyright (c) 2024 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+tests:
+  drivers.flash.api:
+    tags: driver flash_api
+  drivers.flash.api.userspace:
+    tags: driver flash_api userspace
+    extra_configs:
+      - CONFIG_USERSPACE=y
+common:
+    platform_allow:
+      - native_sim/native/64
+      - native_sim
