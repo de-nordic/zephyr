@@ -771,7 +771,7 @@ static int qspi_sfdp_read(const struct device *dev, off_t offset,
 
 	if (res != NRFX_SUCCESS) {
 		LOG_DBG("ANOMALY_122_INIT: %x", res);
-		goto out;
+		goto out_failed_init;
 	}
 
 	qspi_lock(dev);
@@ -795,6 +795,7 @@ static int qspi_sfdp_read(const struct device *dev, off_t offset,
 
 out:
 	qspi_unlock(dev);
+out_failed_init:
 	ANOMALY_122_UNINIT(dev);
 	return qspi_get_zephyr_ret_code(res);
 }
