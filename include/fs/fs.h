@@ -270,7 +270,7 @@ int fs_close(struct fs_file_t *zfp);
  *
  * @retval 0 on success;
  * @retval -EROFS if file is read-only, or when file system has been mounted with
- * 	   the FS_MOUNT_FLAG_READ_ONLY flag;
+ *	   the FS_MOUNT_FLAG_READ_ONLY flag;
  * @retval -ENOTSUP when not implemented by underlying file system driver;
  * @retval <0 an other negative errno code on error.
  */
