@@ -27,6 +27,8 @@ OS management group defines following commands:
     | ``6``             | MCUMGR parameters                             |
     +-------------------+-----------------------------------------------+
     | ``7``             | OS/Application info                           |
+    +-------------------|-----------------------------------------------|
+    | ``8``             | Bootloader parameters                         |
     +-------------------+-----------------------------------------------+
 
 Echo command
@@ -665,6 +667,103 @@ where:
 
     +--------------+-----------------------------------------------+
     | "output"     | Text response including requested parameters. |
+    +--------------+-----------------------------------------------+
+    | "rc"         | :c:enum:`mcumgr_err_t`                        |
+    |              | only appears if non-zero (error condition).   |
+    +--------------+-----------------------------------------------+
+
+Bootloader Information
+**********************
+
+Allows to obtain information on board bootloader and its parameters.
+
+Bootloader Information Request
+==============================
+
+Bootloader information request header:
+
+.. table::
+    :align: center
+
+    +--------+--------------+----------------+
+    | ``OP`` | ``Group ID`` | ``Command ID`` |
+    +========+==============+================+
+    | ``0``  | ``0``        |  ``8``         |
+    +--------+--------------+----------------+
+
+CBOR data of request:
+
+.. code-block:: none
+
+    {
+        (str,opt)<param_name>  : ()
+    }
+
+where:
+
+.. table::
+    :align: center
+    +--------------+-----------------------------------------------+
+    | <param_name> | String represengint queried parameter.        |
+    +--------------+-----------------------------------------------+
+    | "rc"         | :c:enum:`mcumgr_err_t`                        |
+    |              | only appears if non-zero (error condition).   |
+    +--------------+-----------------------------------------------+
+
+Bootloader Information Response
+===============================
+
+Bootloader information response header:
+
+.. table::
+    :align: center
+
+    +--------+--------------+----------------+
+    | ``OP`` | ``Group ID`` | ``Command ID`` |
+    +========+==============+================+
+    | ``2``  | ``0``        |  ``8``         |
+    +--------+--------------+----------------+
+
+In case when no `<param_name>` has been provided in request,
+CBOR data of response:
+
+.. code-block:: none
+
+    {
+        (str)"bootloader"      : (str)
+    }
+
+where:
+
+.. table::
+    :align: center
+    +--------------+-----------------------------------------------+
+    | "bootloader" | String represengint bootloader name           |
+    +--------------+-----------------------------------------------+
+    | "rc"         | :c:enum:`mcumgr_err_t`                        |
+    |              | only appears if non-zero (error condition).   |
+    +--------------+-----------------------------------------------+
+
+
+In case when `<param_name>` is provided:
+
+.. code-block:: none
+
+    {
+        (str,opt)<param_name>	: ()
+        (opt,str)"rc"           : (int)
+    }
+
+where:
+
+.. table::
+    :align: center
+
+    +--------------+-----------------------------------------------+
+    | <param_name> | Is parameter name followed by value, if such  |
+    |              | parameter exists. If parameter does not exit  |
+    |              | only "rc" is reported.                        |
+    |              | Type of returned value is parameter specific. |
     +--------------+-----------------------------------------------+
     | "rc"         | :c:enum:`mcumgr_err_t`                        |
     |              | only appears if non-zero (error condition).   |
