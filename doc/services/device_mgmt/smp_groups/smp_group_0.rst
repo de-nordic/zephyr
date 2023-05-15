@@ -768,3 +768,50 @@ where:
     | "rc"         | :c:enum:`mcumgr_err_t`                        |
     |              | only appears if non-zero (error condition).   |
     +--------------+-----------------------------------------------+
+
+Bootloader Information: MCUboot
+===============================
+
+In case when MCUboot is application bootloader empty request will
+be responeded with:
+
+.. code-block:: none
+
+    {
+        (str)"bootloader"      : (str)"MCUboot"
+    }
+
+Following parameter requests are supported:
+
+.. code-block:: none
+
+    {
+	(str)"mode"		: (int)<anything>
+    }
+
+where `<anything>` is any integer number which, in this case, is ignored.
+
+Response to "mode" is:
+
+.. code-block:: none
+
+    {
+	(str)"mode"		: (int)
+    }
+
+where "mode" is one of:
+
+.. table::
+    :align: center
+
+    +-----+-------------------------------------------------+
+    | -1  | Unknown mode of MCUboot			    |
+    +-----+-------------------------------------------------+
+    |  0  | MCUboot is in single application mode           |
+    +-----+-------------------------------------------------+
+    |  1  | MCUboot is in swap using scratch partition mode |
+    +-----+-------------------------------------------------+
+    |  2  | MCUboot is in swap without scratch mode         |
+    +-----+-------------------------------------------------+
+    |  3  | MCUboot is in DirectXIP mode                    |
+    +-----+-------------------------------------------------+
