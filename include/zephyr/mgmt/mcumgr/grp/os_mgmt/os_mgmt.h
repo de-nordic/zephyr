@@ -23,6 +23,7 @@ extern "C" {
 #define OS_MGMT_ID_RESET		5
 #define OS_MGMT_ID_MCUMGR_PARAMS	6
 #define OS_MGMT_ID_INFO			7
+#define OS_MGMT_ID_BOOTLOADER_INFO	8
 
 /* Bitmask values used by the os info command handler. Note that the width of this variable is
  * 32-bits, allowing 32 flags, custom user-level implementations should start at
@@ -82,6 +83,13 @@ struct os_mgmt_info_append {
 	/* If there has been prior output, must be set to true if a response has been output */
 	bool *prior_output;
 };
+
+/* MCUboot mode of operation */
+#define OS_MGMT_BOOTLOADER_INFO_MCUBOOT_MODE_SINGLE_APP			0
+#define OS_MGMT_BOOTLOADER_INFO_MCUBOOT_MODE_SWAP_SCRATCH		1
+#define OS_MGMT_BOOTLOADER_INFO_MCUBOOT_MODE_SWAP_WITHOUT_SCRATCH	2
+#define OS_MGMT_BOOTLOADER_INFO_MCUBOOT_MODE_DIRECT_XIP			3
+#define OS_MGMT_BOOTLOADER_INFO_MCUBOOT_MODE_UNKNOWN			-1
 
 #ifdef __cplusplus
 }
