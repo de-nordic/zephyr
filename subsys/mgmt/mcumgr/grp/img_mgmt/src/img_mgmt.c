@@ -78,6 +78,22 @@
 _Static_assert(sizeof(struct image_header) == IMAGE_HEADER_SIZE,
 		"struct image_header not required size");
 
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2
+#if FIXED_PARTITION_EXISTS(slot0_ns_partition) && FIXED_PARTITION_IS_RUNNING_APP_PARTITION(slot0_ns_partition)
+#define ACTIVE_IMAGE_IS 0
+#elif FIXED_PARTITION_EXISTS(slot1_partition) && FIXED_PARTITION_IS_RUNNING_APP_PARTITION(slot1_partition)
+#define ACTIVE_IMAGE_IS 0
+#elif FIXED_PARTITION_EXISTS(slot2_partition) && FIXED_PARTITION_IS_RUNNING_APP_PARTITION(slot2_partition)
+#define ACTIVE_IMAGE_IS 1
+#elif FIXED_PARTITION_EXISTS(slot3_partition) && FIXED_PARTITION_IS_RUNNING_APP_PARTITION(slot3_partition)
+#define ACTIVE_IMAGE_IS 1
+#else
+#define ACTIVE_IMAGE_IS 0
+#endif
+#else
+#define ACTIVE_IMAGE_IS 0
+#endif
+
 LOG_MODULE_REGISTER(mcumgr_img_grp, CONFIG_MCUMGR_GRP_IMG_LOG_LEVEL);
 
 struct img_mgmt_state g_img_mgmt_state;
@@ -141,9 +157,15 @@ static int img_mgmt_find_tlvs(int slot, size_t *start_off, size_t *end_off, uint
 
 int img_mgmt_active_slot(int image)
 {
-#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
 	if (image == 1) {
 		return 2;
+	}
+#endif
+
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
+	if (image == 2) {
+		return 4;
 	}
 #endif
 	/* Image 0 */
@@ -155,7 +177,7 @@ int img_mgmt_active_slot(int image)
 
 int img_mgmt_active_image(void)
 {
-	return NUMBER_OF_ACTIVE_IMAGE;
+	return ACTIVE_IMAGE_IS;
 }
 
 /*
@@ -326,11 +348,17 @@ img_mgmt_get_other_slot(void)
 	switch (slot) {
 	case 1:
 		return 0;
-#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER > 2
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
 	case 2:
 		return 3;
 	case 3:
 		return 2;
+#endif
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3
+	case 4:
+		return 5;
+	case 5:
+		return 4;
 #endif
 	}
 	return 1;

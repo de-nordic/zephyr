@@ -25,30 +25,44 @@ LOG_MODULE_DECLARE(mcumgr_img_grp, CONFIG_MCUMGR_GRP_IMG_LOG_LEVEL);
 #define SLOT1_PARTITION		slot1_partition
 #define SLOT2_PARTITION		slot2_partition
 #define SLOT3_PARTITION		slot3_partition
+#define SLOT4_PARTITION		slot4_partition
+#define SLOT5_PARTITION		slot5_partition
 
 BUILD_ASSERT(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 1 ||
-	     (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2 &&
+	     (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2 &&
 	      FIXED_PARTITION_EXISTS(SLOT2_PARTITION) &&
-	      FIXED_PARTITION_EXISTS(SLOT3_PARTITION)),
+	      FIXED_PARTITION_EXISTS(SLOT3_PARTITION)) ||
+	     (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3 &&
+	      FIXED_PARTITION_EXISTS(SLOT4_PARTITION) &&
+	      FIXED_PARTITION_EXISTS(SLOT5_PARTITION)
+	      ),
 	     "Missing partitions?");
 
 #if defined(CONFIG_MCUMGR_GRP_IMG_DIRECT_UPLOAD) &&		\
 	!(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER > 1)
-/* In case when direct upload is enabled, slot2 and slot3 are optional
- * as long as there is support for one application image only.
+/* In case when direct upload is enabled, slot2, slot3, slot4 and slot5
+ *  are optional as long as there is support for one application image only.
  */
 #define ADD_SLOT_2_CONDITION FIXED_PARTITION_EXISTS(SLOT2_PARTITION)
 #define ADD_SLOT_3_CONDITION FIXED_PARTITION_EXISTS(SLOT3_PARTITION)
+#define ADD_SLOT_4_CONDITION FIXED_PARTITION_EXISTS(SLOT4_PARTITION)
+#define ADD_SLOT_5_CONDITION FIXED_PARTITION_EXISTS(SLOT5_PARTITION)
 #elif (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER > 1)
 /* For more than one application image slot2 and slot3 are required. */
 #define ADD_SLOT_2_CONDITION 1
 #define ADD_SLOT_3_CONDITION 1
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3
+#define ADD_SLOT_4_CONDITION 1
+#define ADD_SLOT_5_CONDITION 1
+#endif
 #else
 /* If neither in direct upload mode nor more than one application image
- * is supported, then slot2 and slot3 support is useless.
+ * is supported, then slot2, slot3, slot4 and slot 5 are useless.
  */
 #define ADD_SLOT_2_CONDITION 0
 #define ADD_SLOT_3_CONDITION 0
+#define ADD_SLOT_4_CONDITION 0
+#define ADD_SLOT_5_CONDITION 0
 #endif
 
 static int
@@ -65,6 +79,14 @@ img_mgmt_slot_to_image(int slot)
 #if ADD_SLOT_3_CONDITION
 	case 3:
 		return 1;
+#endif
+#if ADD_SLOT_4_CONDITION
+	case 4:
+		return 2;
+#endif
+#if ADD_SLOT_5_CONDITION
+	case 5:
+		return 2;
 #endif
 	default:
 		assert(0);
@@ -177,6 +199,18 @@ img_mgmt_flash_area_id(int slot)
 		break;
 #endif
 
+#if ADD_SLOT_4_CONDITION
+	case 4:
+		fa_id = FIXED_PARTITION_ID(SLOT4_PARTITION);
+		break;
+#endif
+
+#if ADD_SLOT_5_CONDITION
+	case 5:
+		fa_id = FIXED_PARTITION_ID(SLOT5_PARTITION);
+		break;
+#endif
+
 	default:
 		fa_id = -1;
 		break;
@@ -234,7 +268,7 @@ static int img_mgmt_get_unused_slot_area_id(int slot)
 	return slot != -1  ? img_mgmt_flash_area_id(slot) : -1;
 #endif
 }
-#elif CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2
+#elif CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
 static int img_mgmt_get_unused_slot_area_id(int image)
 {
 	int area_id = -1;
@@ -245,6 +279,10 @@ static int img_mgmt_get_unused_slot_area_id(int image)
 		}
 	} else if (image == 1) {
 		area_id = img_mgmt_flash_area_id(3);
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3
+	} else if (image == 2) {
+		area_id = img_mgmt_flash_area_id(5);
+#endif
 	}
 
 	return area_id;
@@ -321,7 +359,8 @@ int img_mgmt_write_pending(int slot, bool permanent)
 {
 	int rc;
 
-	if (slot != 1 && !(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2 && slot == 3)) {
+	if (slot != 1 && !(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2 && slot == 3) &&
+	    !(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3 && slot == 5)) {
 		return IMG_MGMT_RET_RC_INVALID_SLOT;
 	}
 

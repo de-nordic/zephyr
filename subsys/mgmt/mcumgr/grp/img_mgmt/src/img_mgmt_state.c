@@ -313,7 +313,8 @@ int img_mgmt_set_next_boot_slot(int slot, bool confirm)
 		confirm = true;
 	} else {
 		if (slot != 1 &&
-		    !(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 2 && slot == 3)) {
+		    (!(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2 && slot == 3) ||
+		      (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3 && slot == 5))) {
 			return MGMT_ERR_EINVAL;
 		}
 	}
