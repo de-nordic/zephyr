@@ -322,6 +322,7 @@ img_mgmt_find_by_hash(uint8_t *find, struct image_version *ver)
 			return i;
 		}
 	}
+	printk("Not found\n");
 	return -1;
 }
 

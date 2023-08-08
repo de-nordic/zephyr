@@ -154,17 +154,21 @@ img_mgmt_slot_in_use(int slot)
 	int active_slot = img_mgmt_active_slot(img_mgmt_active_image());
 
 #ifndef CONFIG_MCUBOOT_BOOTLOADER_MODE_DIRECT_XIP
-	uint8_t state_flags = img_mgmt_state_flags(slot);
+//#ifndef CONFIG_MCUMGR_GRP_IMG_ALLOW_ERASE_OF_SECONDARY_WHEN_NOT_IN_REVERT
+	if (slot != active_slot) {
+		uint8_t state_flags = img_mgmt_state_flags(slot);
 
-	if (state_flags & IMG_MGMT_STATE_F_CONFIRMED ||
-	    state_flags & IMG_MGMT_STATE_F_PENDING) {
-		return 1;
+		if (state_flags & IMG_MGMT_STATE_F_CONFIRMED ||
+		    state_flags & IMG_MGMT_STATE_F_PENDING) {
+			return 1;
+		}
 	}
 #endif
 
 	return (active_slot == slot);
 }
 
+#if 0
 /**
  * Sets the pending flag for the specified image slot.  That is, the system
  * will swap to the specified image on the next reboot.  If the permanent
@@ -224,6 +228,7 @@ img_mgmt_state_confirm(void)
 err:
 	return rc;
 }
+#endif
 
 /**
  * Command handler: image state read
@@ -297,11 +302,34 @@ img_mgmt_state_read(struct smp_streamer *ctxt)
 	return ok ? MGMT_ERR_EOK : MGMT_ERR_EMSGSIZE;
 }
 
+static int
+img_mgmt_get_other_slot(int slot)
+{
+	switch (slot) {
+	case 1:
+		return 0;
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
+	case 2:
+		return 3;
+	case 3:
+		return 2;
+#endif
+#if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3
+	case 4:
+		return 5;
+	case 5:
+		return 4;
+#endif
+	}
+	return 1;
+}
+
 int img_mgmt_set_next_boot_slot(int slot, bool confirm)
 {
 	const struct flash_area *fa;
 	int area_id = img_mgmt_flash_area_id(slot);
 	int rc = 0;
+	bool active_slot = img_mgmt_active_slot(img_mgmt_active_image());
 	bool active = (slot == img_mgmt_active_slot(img_mgmt_active_image()));
 
 #if defined(CONFIG_MCUMGR_GRP_IMG_STATUS_HOOKS)
@@ -309,19 +337,55 @@ int img_mgmt_set_next_boot_slot(int slot, bool confirm)
 	uint16_t ret_group;
 #endif
 
-	if (active) {
-		confirm = true;
-	} else {
+#if 0
 		if (slot != 1 &&
-		    (!(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2 && slot == 3) ||
-		      (CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 3 && slot == 5))) {
+		    !(CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2 && !(slot & 1))) {
 			return MGMT_ERR_EINVAL;
 		}
+#endif
+
+#ifndef CONFIG_MCUMGR_GRP_IMG_ALLOW_CONFIRM_NON_ACTIVE_SECONDARY
+	/* Setting confirm flag on active slot is only allowed to active image, to prevent
+	 * confirming something that is in active slot of other image but is broken
+	 * and not running at all.
+	 */
+	if (confirm &&
+	    ((slot != active_slot) && slot != img_mgmt_get_other_slot(active_slot))) {
+		return MGMT_ERR_EINVAL;
+	}
+#else
+	/* Original logic was broken and prevented confirm flag on primary slot of
+	 * non-active image, for the same reason as stated above, but did not prevent setting
+	 * that flag on secondary slot, allowing to boot to confirmed image, that may
+	 * be broken. This is the original, simplified, logic.
+	 */
+	if (!(slot & 1)) {
+		return MGMT_ERR_EINVAL;
+	}
+#endif
+	/* Changing flags when already change is pending is not allowed */
+	if (img_mgmt_state_flags(slot) & IMG_MGMT_STATE_F_PENDING || 
+	    img_mgmt_state_flags(img_mgmt_get_other_slot(slot)) & IMG_MGMT_STATE_F_PENDING) {
+		printk("Chaning not alllowed\n");
+		return IMG_MGMT_RET_RC_IMAGE_ALREADY_PENDING;
 	}
 
-	/* Confirm disallowed if a test is pending. */
-	if (active && img_mgmt_state_any_pending()) {
-		return IMG_MGMT_RET_RC_IMAGE_ALREADY_PENDING;
+	/* Setting test to active slot is not allowed, same as setting test to non-active slot
+	 * when active slot is not confirmed (we are in test mode).
+	 */
+	if (!confirm &&
+	    ((slot == active_slot) ||
+	     !(img_mgmt_state_flags(active_slot) & IMG_MGMT_STATE_F_CONFIRMED))) {
+		printk("Invalid slot\n");
+		return IMG_MGMT_RET_RC_INVALID_SLOT;
+	}
+
+	/* Do nothing if trying to confirm already confirmed active slot or when trying to
+	 * confirm non-active slot that is already confirmed (we are in test mode).
+	 */
+	if ((slot == active_slot && confirm &&
+	     img_mgmt_state_flags(slot) & IMG_MGMT_STATE_F_CONFIRMED)) {
+		return 0;
 	}
 
 	if (flash_area_open(area_id, &fa) != 0) {
@@ -421,6 +485,7 @@ img_mgmt_state_write(struct smp_streamer *ctxt)
 	}
 
 	rc = img_mgmt_set_next_boot_slot(slot, confirm);
+	printk("Rc is %d\n", rc);
 	if (rc != 0) {
 		ok = smp_add_cmd_ret(zse, MGMT_GROUP_ID_IMAGE, rc);
 		goto end;
