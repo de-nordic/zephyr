@@ -23,6 +23,35 @@ config FLASH_HAS_PAGE_LAYOUT
 	  This option is enabled when the SoC flash driver supports
 	  retrieving the layout of flash memory pages.
 
+config FLASH_HAS_ERASE_REQUIREMENT
+	bool
+	help
+	  Before writing certain area of a device this device should be
+	  erased first. This Kconfig should be selected by drivers for
+	  devices that require user to first erase a range before
+	  writing data to it. Generally it should be set for any devices
+	  that can only change storage bits, by write, only in one direction,
+	  for example from value of 1 to 0 (most Flash devices).
+	  State of this Kconfig may be used, in Zephyr subsystems and
+	  user applications, to include or exclude into/from compilation
+	  a code provided to support devices with said characteristic,
+	  when no driver for such device is compiled in.
+
+config FLASH_HAS_NO_ERASE_REQUIREMENT
+	bool
+	help
+	  Device can be directly written without preparing the area
+	  a write will affect. This Kconfig should be selected by drivers
+	  for devices that have no requirement for erasing (preparing)
+	  an area for a write.
+	  Generally this should be selected for any device that
+	  can change storage bits, by write, from any value to opposite
+	  value at any time.
+	  State of this Kconfig may be used, in Zephyr subsystems and
+	  user applications, to include or exclude into/from compilation
+	  a code provided to support devices with said characteristic,
+	  when no driver for such device is compiled in.
+
 config FLASH_JESD216
 	bool
 	help
