@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Nordic Semiconductor ASA
+ * Copyright (c) 2017-2024 Nordic Semiconductor ASA
  * Copyright (c) 2016 Intel Corporation
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -58,8 +58,36 @@ struct flash_pages_layout {
  */
 struct flash_parameters {
 	const size_t write_block_size;
+	/* Device capabilities. Only drivers are supposed to set the
+	 * capabilities directly, users need to call the FLASH_CAPS_
+	 * macros on pointer to flash_parameters to get capabilities.
+	 */
+	struct {
+		/* Device has no explicit erase, so it either erases on
+		 * write or does not require it at all.
+		 * This also includes devices that support erase but
+		 * do not require it.
+		 */
+		bool no_explicit_erase: 1;
+	} caps;
 	uint8_t erase_value; /* Byte value of erased flash */
 };
+
+
+
+/**
+ * Tests flash_parameters for explicit erase
+ *
+ * @return true if device requires explicit erase call before write.
+ */
+#define FLASH_CAPS_EXPLICIT_ERASE(fparams) (!((fparams)->caps.no_explicit_erase))
+
+/**
+ * Tests flash_parameters for lack explicit erase
+ *
+ * @return true if device requires explicit erase call before write.
+ */
+#define FLASH_CAPS_NO_EXPLICIT_ERASE(fparams) ((fparams)->caps.no_explicit_erase)
 
 /**
  * @}
