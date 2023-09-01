@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Nordic Semiconductor ASA
+ * Copyright (c) 2017-2024 Nordic Semiconductor ASA
  * Copyright (c) 2016 Intel Corporation
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -56,6 +56,12 @@ struct flash_pages_layout {
  */
 struct flash_parameters {
 	const size_t write_block_size;
+	struct {
+		/* Device requires erase after program to allow random
+		 * value write.
+		 */
+		uint32_t program_erase: 1;
+	} characteristics;
 	uint8_t erase_value; /* Byte value of erased flash */
 };
 
