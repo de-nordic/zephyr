@@ -39,11 +39,10 @@ const char *pm_device_state_str(enum pm_device_state state)
 	}
 }
 
-int pm_device_action_run(const struct device *dev,
-			 enum pm_device_action action)
+int pm_device_action_validate(const struct device *dev,
+			      enum pm_device_action action)
 {
 	struct pm_device *pm = dev->pm;
-	int ret;
 
 	if (pm == NULL) {
 		return -ENOSYS;
@@ -58,10 +57,22 @@ int pm_device_action_run(const struct device *dev,
 		return -EALREADY;
 	}
 	if (pm->state != action_expected_state[action]) {
-		return -ENOTSUP;
+		return -EINVAL;
 	}
 
+	return 0;
+}
+
+int pm_device_action_run(const struct device *dev,
+			 enum pm_device_action action)
+{
+	struct pm_device *pm = dev->pm;
+	int ret;
+
 	ret = pm->action_cb(dev, action);
+	if (ret == -ENOSYS || ret == -EPERM || ret == -EALREADY || ret == -EINVAL) {
+		return ret;
+	}
 	if (ret < 0) {
 		/*
 		 * TURN_ON and TURN_OFF are actions triggered by a power domain

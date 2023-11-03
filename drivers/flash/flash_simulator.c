@@ -418,7 +418,7 @@ static int flash_init(const struct device *dev)
 	return flash_mock_init(dev);
 }
 
-DEVICE_DT_INST_DEFINE(0, flash_init, NULL,
+DEVICE_DT_INST_DEFINE(0, flash_init, NULL, NULL,
 		    NULL, NULL, POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,
 		    &flash_sim_api);
 

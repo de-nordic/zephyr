@@ -144,8 +144,6 @@ struct pm_device {
 	atomic_t flags;
 	/** Device power state */
 	enum pm_device_state state;
-	/** Device PM action callback */
-	pm_device_action_cb_t action_cb;
 };
 
 /** @cond INTERNAL_HIDDEN */
@@ -333,6 +331,8 @@ struct pm_device {
  */
 const char *pm_device_state_str(enum pm_device_state state);
 
+int pm_device_action_validate(const struct device *dev,
+			      enum pm_device_action action);
 /**
  * @brief Run a pm action on a device.
  *

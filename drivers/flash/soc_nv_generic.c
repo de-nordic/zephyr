@@ -84,6 +84,29 @@ static const struct flash_driver_api soc_nrf_flash_api = {
 #endif
 };
 
+#if IS_ENABLED(CONFIG_PM_DEVICE)
+int soc_nv_mem_pm(const struct device *dev, enum pm_device_action action)
+{
+	const struct device *parent = SOC_NVM_PARENT(dev);
+	int ret;
+
+	if (parent == NULL) {
+		return -ENOTSUP;
+	}
+
+	ret = pm_device_action_validate(parent, action);
+
+	if (ret < 0) {
+		return ret;
+	}
+
+	return pm_device_action_run(parent, action);
+}
+#define PM_CALLBACK soc_nv_mem_pm
+#else
+#define PM_CALLBACK NULL
+#endif
+
 /* In case when there is more than one instance we need to store parent, controller,
  * in config of a instance as each instance may have different controller.
  */
@@ -92,9 +115,10 @@ static const struct flash_driver_api soc_nrf_flash_api = {
 	const static struct soc_nv_flash_config soc_nv_flash_config_##n = {		\
 		.parent = DEVICE_DT_GET(DT_PARENT(DT_DRV_INST(n))),			\
 	};										\
-	DEVICE_DT_DEFINE_SUB(DT_DRV_INST(n), NULL, NULL, &soc_nv_flash_config_##n,	\
-				 POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,		\
-				 &soc_nrf_flash_api);
+	DEVICE_DT_DEFINE_SUB(DT_DRV_INST(n), NULL, PM_CALLBACK, NULL,			\
+			     &soc_nv_flash_config_##n,					\
+			     POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,			\
+			     &soc_nrf_flash_api);
 
 /* Only devices that have controller will be defined, because otherwise there is no
  * parent to call. So when you do DEVICE_DT_GET on node that does not have controller
@@ -109,6 +133,6 @@ static const struct flash_driver_api soc_nrf_flash_api = {
 DT_INST_FOREACH_STATUS_OKAY(SOC_NV_ONLY_WITH_CONTROLLER);
 #else
 /* With single instance device there is no config provided. */
-DEVICE_DT_DEFINE_SUB(DT_DRV_INST(0), NULL, NULL, NULL, POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,
-		     &soc_nrf_flash_api);
+DEVICE_DT_DEFINE_SUB(DT_DRV_INST(0), NULL, PM_CALLBACK, NULL, NULL, POST_KERNEL,
+		     CONFIG_FLASH_INIT_PRIORITY, &soc_nrf_flash_api);
 #endif
