@@ -75,6 +75,8 @@ static void *flash_driver_setup(void)
 	} else {
 		TC_PRINT("No devices with erase requirement present\n");
 		erase_value = 0x55;
+		page_info.start_offset = TEST_AREA_OFFSET;
+		page_info.size = TEST_AREA_MAX - TEST_AREA_OFFSET;
 	}
 
 
