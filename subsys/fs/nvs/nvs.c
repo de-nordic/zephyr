@@ -308,7 +308,7 @@ static int nvs_flash_erase_sector(struct nvs_fs *fs, uint32_t addr)
 #ifdef CONFIG_NVS_LOOKUP_CACHE
 	nvs_lookup_cache_invalidate(fs, addr >> ADDR_SECT_SHIFT);
 #endif
-	rc = flash_erase(fs->flash_device, offset, fs->sector_size);
+	rc = flash_flatten(fs->flash_device, offset, fs->sector_size);
 
 	if (rc) {
 		return rc;
@@ -964,6 +964,11 @@ int nvs_mount(struct nvs_fs *fs)
 	if (fs->flash_parameters == NULL) {
 		LOG_ERR("Could not obtain flash parameters");
 		return -EINVAL;
+	}
+
+	if (!FLASH_CAPS_EXPLICIT_ERASE(fs->flash_parameters)) {
+		LOG_WRN("NVS may not efficiently work with non "
+			"program-erase device");
 	}
 
 	write_block_size = flash_get_write_block_size(fs->flash_device);
