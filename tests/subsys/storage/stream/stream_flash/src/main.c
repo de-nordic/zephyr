@@ -41,7 +41,9 @@ static uint8_t generic_buf[BUF_LEN];
 static uint8_t read_buf[TESTBUF_SIZE];
 const static uint8_t write_buf[TESTBUF_SIZE] = {[0 ... TESTBUF_SIZE - 1] = 0xaa};
 static uint8_t written_pattern[TESTBUF_SIZE] = {[0 ... TESTBUF_SIZE - 1] = 0xaa};
+#if defined(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
 static uint8_t erased_pattern[TESTBUF_SIZE]  = {[0 ... TESTBUF_SIZE - 1] = 0xff};
+#endif
 
 #define VERIFY_BUF(start, size, buf) \
 do { \
@@ -51,7 +53,11 @@ do { \
 } while (0)
 
 #define VERIFY_WRITTEN(start, size) VERIFY_BUF(start, size, written_pattern)
+#if defined(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
 #define VERIFY_ERASED(start, size) VERIFY_BUF(start, size, erased_pattern)
+#else
+#define VERIFY_ERASED(start, size)
+#endif
 
 int stream_flash_callback(uint8_t *buf, size_t len, size_t offset)
 {
@@ -64,9 +70,17 @@ int stream_flash_callback(uint8_t *buf, size_t len, size_t offset)
 	return cb_ret;
 }
 
+#if IS_ENABLED(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
 static void erase_flash(void)
 {
 	int rc;
+#if IS_ENABLED(CONFIG_FLASH_HAS_NO_EXPLICIT_ERASE)
+	const struct flash_parameters *fparam = flash_get_parameters(fdev);
+
+	if (!FLASH_CAPS_EXPLICIT_ERASE(fparam)) {
+		return;
+	}
+#endif
 
 	for (int i = 0; i < MAX_NUM_PAGES; i++) {
 		rc = flash_erase(fdev,
@@ -75,6 +89,7 @@ static void erase_flash(void)
 		zassert_equal(rc, 0, "should succeed");
 	}
 }
+#endif
 
 
 static void init_target(void)
@@ -91,7 +106,9 @@ static void init_target(void)
 	cb_buf = NULL;
 	cb_ret = 0;
 
+#if IS_ENABLED(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
 	erase_flash();
+#endif
 
 	rc = stream_flash_init(&ctx, fdev, generic_buf, BUF_LEN, FLASH_BASE, 0,
 			       stream_flash_callback);
@@ -588,7 +605,7 @@ ZTEST(lib_stream_flash, test_stream_flash_progress_resume)
 	bytes_written = load_progress(progress_key);
 	zassert_equal(bytes_written, bytes_written_old,
 		      "expected bytes_written to be loaded");
-#ifdef CONFIG_STREAM_FLASH_ERASE
+#if defined(CONFIG_STREAM_FLASH_ERASE)
 	zassert_equal(erase_offset_old, ctx.last_erased_page_start_offset,
 		      "expected last erased page offset to be loaded");
 #endif
