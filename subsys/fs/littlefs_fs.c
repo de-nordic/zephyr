@@ -28,6 +28,9 @@
 
 #include "fs_impl.h"
 
+/* Used on devices that have no explicit erase */
+#define LITTLEFS_DEFAULT_BLOCK_SIZE     4096
+
 /* note: one of the next options have to be enabled, at least */
 BUILD_ASSERT(IS_ENABLED(CONFIG_FS_LITTLEFS_BLK_DEV) ||
 	     IS_ENABLED(CONFIG_FS_LITTLEFS_FMP_DEV));
@@ -195,7 +198,7 @@ static int lfs_api_erase(const struct lfs_config *c, lfs_block_t block)
 	const struct flash_area *fa = c->context;
 	size_t offset = block * c->block_size;
 
-	int rc = flash_area_erase(fa, offset, c->block_size);
+	int rc = flash_area_flatten(fa, offset, c->block_size);
 
 	return errno_to_lfs(rc);
 }
@@ -620,15 +623,26 @@ static bool get_page_cb(const struct flash_pages_info *info, void *ctxp)
  */
 static lfs_size_t get_block_size(const struct flash_area *fa)
 {
+#if defined(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
 	struct get_page_ctx ctx = {
 		.area = fa,
 		.max_size = 0,
 	};
 	const struct device *dev = flash_area_get_device(fa);
+#if defined(CONFIG_FLASH_HAS_NO_EXPLICIT_ERASE)
+	const struct flash_parameters *fparams = flash_get_parameters(dev);
+
+	if (!FLASH_CAPS_EXPLICIT_ERASE(fparams)) {
+		return LITTLEFS_DEFAULT_BLOCK_SIZE;
+	}
+#endif
 
 	flash_page_foreach(dev, get_page_cb, &ctx);
 
 	return ctx.max_size;
+#else
+	return LITTLEFS_DEFAULT_BLOCK_SIZE;
+#endif
 }
 
 static int littlefs_flash_init(struct fs_littlefs *fs, void *dev_id)
