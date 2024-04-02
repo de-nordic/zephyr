@@ -128,7 +128,7 @@ typedef void (*flash_api_pages_layout)(const struct device *dev,
  * @brief Callback API upon getting the Flash size.
  * See @a flash_get_size() for argument description
  */
-typedef size_t (*flash_api_size)(const struct device *dev);
+typedef ssize_t (*flash_api_size)(const struct device *dev);
 
 typedef int (*flash_api_sfdp_read)(const struct device *dev, off_t offset,
 				   void *data, size_t len);
@@ -443,9 +443,9 @@ static inline const struct flash_parameters *z_impl_flash_get_parameters(const s
  *
  *  @return Flash size in bytes.
  */
-__syscall size_t flash_get_size(const struct device *dev);
+__syscall ssize_t flash_get_size(const struct device *dev);
 
-static inline size_t z_impl_flash_get_size(const struct device *dev)
+static inline ssize_t z_impl_flash_get_size(const struct device *dev)
 {
 	const struct flash_driver_api *api =
 		(const struct flash_driver_api *)dev->api;
