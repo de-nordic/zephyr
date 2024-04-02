@@ -198,6 +198,11 @@ void flash_stm32wba_page_layout(const struct device *dev,
 	*layout_size = 1;
 }
 
+static size_t flash_stm32wba_get_size(const struct device *dev)
+{
+	return FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_stm32_api = {
 	.erase = flash_stm32_erase,
 	.write = flash_stm32_write,
@@ -206,6 +211,7 @@ static const struct flash_driver_api flash_stm32_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_stm32wba_page_layout,
 #endif
+	.size = flash_stm32wba_get_size,
 };
 
 static int stm32_flash_init(const struct device *dev)

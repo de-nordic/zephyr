@@ -1083,9 +1083,9 @@ static int flash_flexspi_nor_init(const struct device *dev)
 
 static ssize_t flash_flexspi_nor_get_size(const struct device *dev)
 {
-	const struct flash_flexspi_nor_config *config = dev->config;
+	struct flash_flexspi_nor_data *dev_data = dev->data;
 
-	return config->layout.pages_size * config->layout.pages_count;
+	return dev_data->layout.pages_size * dev_data->layout.pages_count;
 }
 
 static const struct flash_driver_api flash_flexspi_nor_api = {

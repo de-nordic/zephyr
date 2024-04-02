@@ -163,6 +163,11 @@ static void nrf_mram_page_layout(const struct device *dev, const struct flash_pa
 }
 #endif
 
+static ssize_t nrf_mram_get_size(const struct device *dev)
+{
+	return MRAM_SIZE;
+}
+
 static const struct flash_driver_api nrf_mram_api = {
 	.read = nrf_mram_read,
 	.write = nrf_mram_write,
@@ -171,6 +176,7 @@ static const struct flash_driver_api nrf_mram_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = nrf_mram_page_layout,
 #endif
+	.size = nrf_mram_get_size,
 };
 
 DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,

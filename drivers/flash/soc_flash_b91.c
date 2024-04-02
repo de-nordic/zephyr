@@ -220,6 +220,13 @@ static void flash_b91_pages_layout(const struct device *dev,
 
 static struct flash_b91_data flash_data;
 
+static ssize_t flash_b91_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_b91_api = {
 	.erase = flash_b91_erase,
 	.write = flash_b91_write,

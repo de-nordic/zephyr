@@ -653,6 +653,13 @@ static struct flash_stm32_priv flash_data = {
 		    .enr = DT_INST_CLOCKS_CELL(0, bits)},
 };
 
+static ssize_t flash_stm32h7_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return KB(REAL_FLASH_SIZE_KB);
+}
+
 static const struct flash_driver_api flash_stm32h7_api = {
 	.erase = flash_stm32h7_erase,
 	.write = flash_stm32h7_write,
@@ -661,6 +668,7 @@ static const struct flash_driver_api flash_stm32h7_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_stm32_page_layout,
 #endif
+	.size = flash_stm32h7_get_size,
 };
 
 static int stm32h7_flash_init(const struct device *dev)

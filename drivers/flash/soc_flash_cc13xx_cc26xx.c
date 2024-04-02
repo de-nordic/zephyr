@@ -261,6 +261,11 @@ static void flash_cc13xx_cc26xx_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+static ssize_t flash_cc13xx_cc26xx_get_size(const struct device *dev)
+{
+	return FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_cc13xx_cc26xx_api = {
 	.erase = flash_cc13xx_cc26xx_erase,
 	.write = flash_cc13xx_cc26xx_write,
@@ -269,6 +274,7 @@ static const struct flash_driver_api flash_cc13xx_cc26xx_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_cc13xx_cc26xx_layout,
 #endif
+	.size = flash_cc13xx_cc26xx_get_size,
 };
 
 static struct flash_priv flash_data;

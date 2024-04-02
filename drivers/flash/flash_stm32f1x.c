@@ -242,3 +242,14 @@ void flash_stm32_page_layout(const struct device *dev,
 	*layout = &flash_layout;
 	*layout_size = 1;
 }
+
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+#if defined(CONFIG_SOC_SERIES_STM32F3X)
+	return DT_REG_SIZE(DT_INST(0, soc_nv_flash));
+#else
+	return CONFIG_FLASH_SIZE;
+#endif
+}

@@ -447,3 +447,10 @@ void flash_stm32_page_layout(const struct device *dev,
 
 	*layout_size = stm32_flash_layout_size;
 }
+
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return FLASH_SIZE;
+}

@@ -490,6 +490,15 @@ flash_nios2_qspi_get_parameters(const struct device *dev)
 	return &flash_nios2_qspi_parameters;
 }
 
+static ssize_t
+flash_nios2_qspi_get_size(const struct device *dev)
+{
+	struct flash_nios2_qspi_config *flash_cfg = dev->data;
+	alt_qspi_controller2_dev *qspi_dev = &flash_cfg->qspi_dev;
+
+	return qspi_dev->data_end;
+}
+
 static const struct flash_driver_api flash_nios2_qspi_api = {
 	.erase = flash_nios2_qspi_erase,
 	.write = flash_nios2_qspi_write,
@@ -499,6 +508,7 @@ static const struct flash_driver_api flash_nios2_qspi_api = {
 	.page_layout = (flash_api_pages_layout)
 		       flash_page_layout_not_implemented,
 #endif
+	.size = flash_nios2_qspi_get_size,
 };
 
 static int flash_nios2_qspi_init(const struct device *dev)

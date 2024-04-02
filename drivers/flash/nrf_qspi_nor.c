@@ -1152,7 +1152,6 @@ static const struct flash_pages_layout dev_layout = {
 	.pages_count = LAYOUT_PAGES_COUNT,
 	.pages_size = CONFIG_NORDIC_QSPI_NOR_FLASH_LAYOUT_PAGE_SIZE,
 };
-#undef LAYOUT_PAGES_COUNT
 
 static void qspi_nor_pages_layout(const struct device *dev,
 				  const struct flash_pages_layout **layout,
@@ -1176,6 +1175,13 @@ qspi_flash_get_parameters(const struct device *dev)
 	return &qspi_flash_parameters;
 }
 
+ssize_t qspi_nor_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return CONFIG_NORDIC_QSPI_NOR_FLASH_LAYOUT_PAGE_SIZE * LAYOUT_PAGES_COUNT;
+}
+
 static const struct flash_driver_api qspi_nor_api = {
 	.read = qspi_nor_read,
 	.write = qspi_nor_write,
@@ -1188,6 +1194,7 @@ static const struct flash_driver_api qspi_nor_api = {
 	.sfdp_read = qspi_sfdp_read,
 	.read_jedec_id = qspi_read_jedec_id,
 #endif /* CONFIG_FLASH_JESD216_API */
+	.size = qspi_nor_get_size,
 };
 
 #ifdef CONFIG_PM_DEVICE

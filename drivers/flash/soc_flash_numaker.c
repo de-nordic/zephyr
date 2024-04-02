@@ -252,6 +252,11 @@ static const struct flash_parameters *flash_numaker_get_parameters(const struct 
 
 static struct flash_numaker_data flash_data;
 
+static ssize_t flash_numaker_get_size(const struct device *dev)
+{
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api flash_numaker_api = {
 	.erase = flash_numaker_erase,
 	.write = flash_numaker_write,
@@ -260,6 +265,7 @@ static const struct flash_driver_api flash_numaker_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_numaker_pages_layout,
 #endif
+	.size = flash_numaker_get_size,
 };
 
 static int flash_numaker_init(const struct device *dev)

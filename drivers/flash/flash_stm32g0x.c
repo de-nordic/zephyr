@@ -195,6 +195,13 @@ int flash_stm32_write_range(const struct device *dev, unsigned int offset,
 	return rc;
 }
 
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return FLASH_SIZE;
+}
+
 /*
  * The address space is always continuous, even though a subset of G0 SoCs has
  * two flash banks.

@@ -939,7 +939,7 @@ static ssize_t nxp_s32_qspi_get_size(const struct device *dev)
 {
 	const struct nxp_s32_qspi_config *config = dev->config;
 
-	return config->layout.page_size * config->layout.pages_count;
+	return config->layout.pages_size * config->layout.pages_count;
 }
 
 static const struct flash_driver_api nxp_s32_qspi_api = {

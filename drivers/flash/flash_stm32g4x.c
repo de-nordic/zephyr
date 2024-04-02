@@ -440,6 +440,11 @@ void flash_stm32_page_layout(const struct device *dev,
 	*layout_size = ARRAY_SIZE(stm32g4_flash_layout);
 }
 
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	return FLASH_SIZE;
+}
+
 /* Override weak function */
 int  flash_stm32_check_configuration(void)
 {

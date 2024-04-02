@@ -394,7 +394,12 @@ int flash_stm32_get_rdp(const struct device *dev, bool *enabled,
 }
 #endif /* CONFIG_FLASH_STM32_READOUT_PROTECTION */
 
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
 
+	return SOC_NV_FLASH_SIZE;
+}
 
 void flash_stm32_page_layout(const struct device *dev,
 			     const struct flash_pages_layout **layout,

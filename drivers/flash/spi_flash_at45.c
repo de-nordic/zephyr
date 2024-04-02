@@ -646,6 +646,13 @@ flash_at45_get_parameters(const struct device *dev)
 	return &flash_at45_parameters;
 }
 
+static ssize_t spi_flash_at45_get_size(const struct device *dev)
+{
+	const struct spi_flash_at45_config *cfg = dev->config;
+
+	return cfg->chip_size;
+}
+
 static const struct flash_driver_api spi_flash_at45_api = {
 	.read = spi_flash_at45_read,
 	.write = spi_flash_at45_write,
@@ -654,6 +661,7 @@ static const struct flash_driver_api spi_flash_at45_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = spi_flash_at45_pages_layout,
 #endif
+	.size = spi_flash_at45_get_size,
 };
 
 #define INST_HAS_RESET_GPIO(idx) \

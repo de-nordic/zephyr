@@ -132,6 +132,13 @@ flash_mcux_get_parameters(const struct device *dev)
 
 static struct flash_priv flash_data;
 
+static ssize_t flash_mcux_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api flash_mcux_api = {
 	.erase = flash_mcux_erase,
 	.write = flash_mcux_write,
@@ -140,6 +147,7 @@ static const struct flash_driver_api flash_mcux_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_mcux_pages_layout,
 #endif
+	.size = flash_mcux_get_size,
 };
 
 static int flash_mcux_init(const struct device *dev)

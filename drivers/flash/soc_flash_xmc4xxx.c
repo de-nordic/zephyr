@@ -180,9 +180,17 @@ static const struct flash_parameters *flash_xmc4xxx_get_parameters(const struct 
 	return &dev_config->parameters;
 }
 
+static ssize_t flash_xmc4xxx_get_size(const struct device *dev)
+{
+	const struct flash_xmc4xxx_config *dev_config = dev->config;
+
+	return config->size;
+}
+
 static const struct flash_driver_api flash_xmc4xxx_api = {.erase = flash_xmc4xxx_erase,
 							  .write = flash_xmc4xxx_write,
 							  .read = flash_xmc4xxx_read,
+							  .size = flash_xmc4xxx_get_size,
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 							  .page_layout = flash_xmc4xxx_page_layout,
 #endif

@@ -464,11 +464,11 @@ static void sam_flash_api_pages_layout(const struct device *dev,
 	*layout_size = config->pages_layouts_size;
 }
 
-static ssize_t flash_sam_get_size(const struct device *dev)
+static ssize_t sam_flash_get_size(const struct device *dev)
 {
-	ARG_UNUSED(dev);
+	const struct sam_flash_config *config = dev->config;
 
-	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+	return config->area_size;
 }
 
 static struct flash_driver_api sam_flash_api = {
@@ -477,7 +477,7 @@ static struct flash_driver_api sam_flash_api = {
 	.erase = sam_flash_erase,
 	.get_parameters = sam_flash_get_parameters,
 	.page_layout = sam_flash_api_pages_layout,
-	.size = sam_flash_api_get_size,
+	.size = sam_flash_get_size,
 };
 
 static int sam_flash_init(const struct device *dev)

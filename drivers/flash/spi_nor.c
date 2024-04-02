@@ -1542,6 +1542,11 @@ flash_nor_get_parameters(const struct device *dev)
 	return &flash_nor_parameters;
 }
 
+static ssize_t flash_nor_get_size(const struct device *dev)
+{
+	return dev_flash_size(dev);
+}
+
 static const struct flash_driver_api spi_nor_api = {
 	.read = spi_nor_read,
 	.write = spi_nor_write,
@@ -1557,6 +1562,7 @@ static const struct flash_driver_api spi_nor_api = {
 #if defined(CONFIG_FLASH_EX_OP_ENABLED)
 	.ex_op = flash_spi_nor_ex_op,
 #endif
+	.size = flash_nor_get_size,
 };
 
 #define PAGE_LAYOUT_GEN(idx)								\

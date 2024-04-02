@@ -15,6 +15,34 @@
 
 #include "flash_stm32.h"
 
+#if !defined(FLASH_SECTOR_TOTAL)
+#error "Unknown flash layout"
+#else
+
+/** Single bank or single bank layout in dual bank mode **/
+/* Counts */
+#define K256_COUNT	(3 * ((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 1024)) +	\
+			 7 * (FLASH_SECTOR_TOTAL == 24))
+
+#define K128_COUNT	(1 * (((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 1024)) ||	\
+			      (FLASH_SECTOR_TOTAL == 24)) +					\
+			 3 * ((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 512)))
+
+#define K64_COUNT	(1 * ((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 512)))
+
+#define K32_COUNT	(4 * (((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 1024)) ||	\
+			      (FLASH_SECTOR_TOTAL == 24)) +					\
+			 2 * (FLASH_SECTOR_TOTAL == 2))
+
+#define K16_COUNT	(4 * (((FLASH_SECTOR_TOTAL == 8) && (CONFIG_FLASH_SIZE == 512)) ||	\
+			      (FLASH_SECTOR_TOTAL == 4)))
+
+#define KALL_COUNT	(K16_COUNT + K32_COUNT + K64_COUNT + K128_COUNT + K256_COUNT)
+
+#define KALL_SIZE	(K16_COUNT * KB(16) + K32_COUNT * KB(32) + K64_COUNT * KB(64) +		\
+			 K128_COUNT * KB(128) + K256_COUNT * KB(256))
+#endif
+
 bool flash_stm32_valid_range(const struct device *dev, off_t offset,
 			     uint32_t len,
 			     bool write)
@@ -219,6 +247,18 @@ static const struct flash_pages_layout stm32f7_flash_layout_dual_bank[] = {
 #else
 #error "Unknown flash layout"
 #endif/* !defined(FLASH_SECTOR_TOTAL) */
+
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	/*
+	 * In case when FLASH_SECTOR_TOTAL == 24, the number of pages changes due to how the flash
+	 * gets divided, but the KALL_SIZE is the same as the division into pages does not change
+	 * the overall size.
+	 */
+	return KALL_SIZE;
+}
 
 void flash_stm32_page_layout(const struct device *dev,
 			     const struct flash_pages_layout **layout,

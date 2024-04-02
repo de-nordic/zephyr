@@ -278,6 +278,11 @@ static void nrf_rram_page_layout(const struct device *dev, const struct flash_pa
 }
 #endif
 
+static size_t flash_rram_get_size(const struct device *dev)
+{
+	return RRAM_SIZE;
+}
+
 static const struct flash_driver_api nrf_rram_api = {
 	.read = nrf_rram_read,
 	.write = nrf_rram_write,
@@ -286,6 +291,7 @@ static const struct flash_driver_api nrf_rram_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = nrf_rram_page_layout,
 #endif
+	.size = flash_rram_get_size,
 };
 
 static int nrf_rram_init(const struct device *dev)

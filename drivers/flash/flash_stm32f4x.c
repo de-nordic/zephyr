@@ -36,6 +36,20 @@ typedef uint8_t flash_prg_t;
 #error Write block size must be a power of 2, from 1 to 8
 #endif
 
+#define K128_COUNT	((FLASH_SECTOR_TOTAL == 6) * 1 +				\
+			 (FLASH_SECTOR_TOTAL == 8) * 3 +				\
+			 (FLASH_SECTOR_TOTAL == 12) * 7 +				\
+			 (FLASH_SECTOR_TOTAL == 16) * 11 +				\
+			 (FLASH_SECTOR_TOTAL == 24) * 7)
+#define K64_COUNT	1
+#define K16_COUNT	4
+
+/* For the FLASH_SECTOR_TOTAL == 24 the layout is twice the layout of FLASH_SECTOR_TOTAL = 12 */
+#define KALL_COUNT	((K16_COUNT + K64_COUNT + K128_COUNT) * (1 + (FLASH_SECTOR_TOTAL == 24)))
+
+#define KALL_SIZE	((K16_COUNT * KB(16) + K64_COUNT * KB(64) + K128_COUNT * KB(128)) *	\
+			 (1 + (FLASH_SECTOR_TOTAL == 24)))
+
 bool flash_stm32_valid_range(const struct device *dev, off_t offset,
 			     uint32_t len,
 			     bool write)
@@ -467,6 +481,13 @@ static const struct flash_pages_layout stm32f4_flash_layout[] = {
 #error "Unknown flash layout"
 #endif /* FLASH_SECTOR_TOTAL == 5 */
 #endif/* !defined(FLASH_SECTOR_TOTAL) */
+
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return KALL_SIZE;
+}
 
 void flash_stm32_page_layout(const struct device *dev,
 			     const struct flash_pages_layout **layout,

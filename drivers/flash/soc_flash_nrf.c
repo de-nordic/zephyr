@@ -281,6 +281,13 @@ flash_nrf_get_parameters(const struct device *dev)
 	return &flash_nrf_parameters;
 }
 
+static ssize_t flash_nrf_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return  nrfx_nvmc_flash_size_get();
+}
+
 static const struct flash_driver_api flash_nrf_api = {
 	.read = flash_nrf_read,
 	.write = flash_nrf_write,
@@ -289,6 +296,7 @@ static const struct flash_driver_api flash_nrf_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_nrf_pages_layout,
 #endif
+	.size = flash_nrf_get_size,
 };
 
 static int nrf_flash_init(const struct device *dev)

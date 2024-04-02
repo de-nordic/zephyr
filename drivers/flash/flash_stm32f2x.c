@@ -13,6 +13,18 @@
 
 #include "flash_stm32.h"
 
+#define K16_COUNT	4
+#define K64_COUNT	1
+#define K128_COUNT	7
+
+#define K16_MASK	0x0000c000
+#define K64_MASK	0x00010000
+#define K128_MASK	0x000e0000
+
+#define KALL_COUNT	(K16_COUNT + K64_COUNT + K128_COUNT)
+#define KALL_SIZE	(K16_COUNT * KB(16) + K64_COUNT * KB(64) + K128_COUNT * KB(128))
+
+
 bool flash_stm32_valid_range(const struct device *dev, off_t offset,
 			     uint32_t len,
 			     bool write)
@@ -187,6 +199,13 @@ static const struct flash_pages_layout stm32f2_flash_layout[] = {
 #error "Unknown flash layout"
 #endif /* FLASH_SECTOR_TOTAL == 12 */
 #endif/* !defined(FLASH_SECTOR_TOTAL) */
+
+ssize_t flash_stm32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return KALL_SIZE;
+}
 
 void flash_stm32_page_layout(const struct device *dev,
 			     const struct flash_pages_layout **layout,
