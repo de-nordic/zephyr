@@ -880,6 +880,14 @@ flash_andes_qspi_get_parameters(const struct device *dev)
 	return &config->parameters;
 }
 
+static ssize_t
+flash_andes_qspi_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return (size_t)dev_flash_size(dev);
+}
+
 static const struct flash_driver_api flash_andes_qspi_api = {
 	.read = flash_andes_qspi_read,
 	.write = flash_andes_qspi_write,
@@ -892,6 +900,7 @@ static const struct flash_driver_api flash_andes_qspi_api = {
 	.sfdp_read = flash_andes_qspi_sfdp_read,
 	.read_jedec_id = flash_andes_qspi_read_jedec_id,
 #endif
+	.size = flash_andes_qspi_get_size,
 };
 
 #if (CONFIG_XIP)

@@ -143,6 +143,16 @@ static const struct flash_parameters *flash_cdns_get_parameters(const struct dev
 
 	return &flash_cdns_parameters;
 }
+
+static ssize_t
+flash_cdns_get_size(const struct device *dev)
+{
+	struct flash_cadence_nand_data *const nand_data = DEV_DATA(nand_dev);
+	struct cadence_nand_params *nand_param = &nand_data->params;
+
+	return (nand_param->page_count * nand_param->page_size);
+}
+
 static const struct flash_driver_api flash_cdns_nand_api = {
 	.erase = flash_cdns_nand_erase,
 	.write = flash_cdns_nand_write,
@@ -151,6 +161,7 @@ static const struct flash_driver_api flash_cdns_nand_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_cdns_page_layout,
 #endif
+	.size = flash_cdns_get_size,
 };
 
 #if CONFIG_CDNS_NAND_INTERRUPT_SUPPORT

@@ -168,6 +168,13 @@ static void flash_ambiq_pages_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+static ssize_t flash_ambiq_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return SOC_NV_FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_ambiq_driver_api = {
 	.read = flash_ambiq_read,
 	.write = flash_ambiq_write,
@@ -176,6 +183,7 @@ static const struct flash_driver_api flash_ambiq_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_ambiq_pages_layout,
 #endif
+	.size = flash_ambiq_get_size,
 };
 
 static int flash_ambiq_init(const struct device *dev)

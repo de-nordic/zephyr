@@ -168,6 +168,14 @@ static int flash_esp32_init(const struct device *dev)
 	return 0;
 }
 
+static ssize_t
+flash_esp32_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api flash_esp32_driver_api = {
 	.read = flash_esp32_read,
 	.write = flash_esp32_write,
@@ -176,6 +184,7 @@ static const struct flash_driver_api flash_esp32_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_esp32_page_layout,
 #endif
+	.size = flash_esp32_get_size,
 };
 
 static struct flash_esp32_dev_data flash_esp32_data;

@@ -98,6 +98,12 @@ flash_gd32_get_parameters(const struct device *dev)
 	return &flash_gd32_parameters;
 }
 
+static ssize_t
+flash_gd32_get_size(const struct device *dev)
+{
+	return SOC_NV_FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_gd32_driver_api = {
 	.read = flash_gd32_read,
 	.write = flash_gd32_write,
@@ -106,6 +112,7 @@ static const struct flash_driver_api flash_gd32_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_gd32_pages_layout,
 #endif
+	.size = flash_gd32_get_size,
 };
 
 static int flash_gd32_init(const struct device *dev)
