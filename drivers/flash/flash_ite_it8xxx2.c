@@ -499,6 +499,11 @@ static void flash_it8xxx2_pages_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+static ssize_t flash_it8xxx2_get_size(const struct device *dev)
+{
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api flash_it8xxx2_api = {
 	.erase = flash_it8xxx2_erase,
 	.write = flash_it8xxx2_write,
@@ -507,6 +512,7 @@ static const struct flash_driver_api flash_it8xxx2_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_it8xxx2_pages_layout,
 #endif
+	.size = flash_it8xxx2_get_size,
 };
 
 static struct flash_it8xxx2_dev_data flash_it8xxx2_data;

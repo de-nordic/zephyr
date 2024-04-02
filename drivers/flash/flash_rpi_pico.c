@@ -298,6 +298,11 @@ void flash_rpi_page_layout(const struct device *dev, const struct flash_pages_la
 
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+static ssize_t flash_rpi_get_size(const struct device *dev)
+{
+	return FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_rpi_driver_api = {
 	.read = flash_rpi_read,
 	.write = flash_rpi_write,
@@ -306,6 +311,7 @@ static const struct flash_driver_api flash_rpi_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_rpi_page_layout,
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
+	.size = flash_rpi_get_size,
 };
 
 DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL,

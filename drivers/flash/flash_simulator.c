@@ -361,6 +361,11 @@ flash_sim_get_parameters(const struct device *dev)
 	return &flash_sim_parameters;
 }
 
+static ssize_t flash_sim_get_size(const struct device *dev)
+{
+	return FLASH_SIMULATOR_FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_sim_api = {
 	.read = flash_sim_read,
 	.write = flash_sim_write,
@@ -369,6 +374,7 @@ static const struct flash_driver_api flash_sim_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_sim_page_layout,
 #endif
+	.size = flash_sim_get_size,
 };
 
 #ifdef CONFIG_ARCH_POSIX

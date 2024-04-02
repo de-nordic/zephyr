@@ -1081,6 +1081,13 @@ static int flash_flexspi_nor_init(const struct device *dev)
 	return 0;
 }
 
+static ssize_t flash_flexspi_nor_get_size(const struct device *dev)
+{
+	const struct flash_flexspi_nor_config *config = dev->config;
+
+	return config->layout.pages_size * config->layout.pages_count;
+}
+
 static const struct flash_driver_api flash_flexspi_nor_api = {
 	.erase = flash_flexspi_nor_erase,
 	.write = flash_flexspi_nor_write,
@@ -1093,6 +1100,7 @@ static const struct flash_driver_api flash_flexspi_nor_api = {
 	.sfdp_read = flash_flexspi_nor_sfdp_read,
 	.read_jedec_id = flash_flexspi_nor_read_id,
 #endif
+	.size = flash_flexspi_nor_get_size,
 };
 
 #define CONCAT3(x, y, z) x ## y ## z

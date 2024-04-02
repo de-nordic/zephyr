@@ -270,6 +270,11 @@ void flash_smartbond_page_layout(const struct device *dev,
 }
 #endif /* CONFIG_FLASH_PAGE_LAYOUT */
 
+static ssize_t flash_smartbond_get_size(const struct device *dev)
+{
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api flash_smartbond_driver_api = {
 	.read = flash_smartbond_read,
 	.write = flash_smartbond_write,
@@ -278,6 +283,7 @@ static const struct flash_driver_api flash_smartbond_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_smartbond_page_layout,
 #endif
+	.size = flash_smartbond_get_size,
 };
 
 static const struct flash_smartbond_config flash_smartbond_0_config = {

@@ -518,6 +518,7 @@ static const struct flash_driver_api flash_stm32_api = {
 #ifdef CONFIG_FLASH_EX_OP_ENABLED
 	.ex_op = flash_stm32_ex_op,
 #endif
+	.size = flash_stm32_get_size,
 };
 
 static int stm32_flash_init(const struct device *dev)

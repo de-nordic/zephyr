@@ -736,6 +736,13 @@ static void flash_stm32_qspi_pages_layout(const struct device *dev,
 }
 #endif
 
+static ssize_t flash_stm32_qspi_get_size(const struct device *dev)
+{
+	const struct flash_stm32_qspi_config *dev_cfg = dev->config;
+
+	return dev_cfg->flash_size;
+}
+
 static const struct flash_driver_api flash_stm32_qspi_driver_api = {
 	.read = flash_stm32_qspi_read,
 	.write = flash_stm32_qspi_write,
@@ -748,6 +755,7 @@ static const struct flash_driver_api flash_stm32_qspi_driver_api = {
 	.sfdp_read = qspi_read_sfdp,
 	.read_jedec_id = qspi_read_jedec_id,
 #endif /* CONFIG_FLASH_JESD216_API */
+	.size = flash_stm32_qspi_get_size,
 };
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)

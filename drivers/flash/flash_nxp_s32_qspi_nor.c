@@ -935,6 +935,13 @@ static int nxp_s32_qspi_init(const struct device *dev)
 	return ret;
 }
 
+static ssize_t nxp_s32_qspi_get_size(const struct device *dev)
+{
+	const struct nxp_s32_qspi_config *config = dev->config;
+
+	return config->layout.page_size * config->layout.pages_count;
+}
+
 static const struct flash_driver_api nxp_s32_qspi_api = {
 	.erase = nxp_s32_qspi_erase,
 	.write = nxp_s32_qspi_write,
@@ -947,6 +954,7 @@ static const struct flash_driver_api nxp_s32_qspi_api = {
 	.sfdp_read = nxp_s32_qspi_sfdp_read,
 	.read_jedec_id = nxp_s32_qspi_read_id,
 #endif /* CONFIG_FLASH_JESD216_API */
+	.size = nxp_s32_qspi_get_size,
 };
 
 #define QSPI_PAGE_LAYOUT(n)							\

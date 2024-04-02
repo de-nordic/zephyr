@@ -480,6 +480,11 @@ static int flash_sam0_init(const struct device *dev)
 	return flash_sam0_write_protection(dev, false);
 }
 
+static ssize_t flash_sam0_get_size(const struct device *dev)
+{
+	return CONFIG_FLASH_SIZE;
+}
+
 static const struct flash_driver_api flash_sam0_api = {
 	.erase = flash_sam0_erase,
 	.write = flash_sam0_write,
@@ -488,6 +493,7 @@ static const struct flash_driver_api flash_sam0_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_sam0_page_layout,
 #endif
+	.size = flash_sam0_get_size,
 };
 
 static struct flash_sam0_data flash_sam0_data_0;

@@ -1489,6 +1489,13 @@ static void flash_stm32_ospi_pages_layout(const struct device *dev,
 }
 #endif
 
+static ssize_t flash_stm32_ospi_get_size(const struct device *dev)
+{
+	struct flash_stm32_ospi_data *dev_data = dev->data;
+
+	return data->layout.pages_size * data->layout.pages_count;
+}
+
 static const struct flash_driver_api flash_stm32_ospi_driver_api = {
 	.read = flash_stm32_ospi_read,
 	.write = flash_stm32_ospi_write,
@@ -1501,6 +1508,7 @@ static const struct flash_driver_api flash_stm32_ospi_driver_api = {
 	.sfdp_read = ospi_read_sfdp,
 	.read_jedec_id = ospi_read_jedec_id,
 #endif /* CONFIG_FLASH_JESD216_API */
+	.size = flash_ospi_stm32_get_size,
 };
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)

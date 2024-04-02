@@ -207,6 +207,14 @@ static int flash_gecko_init(const struct device *dev)
 	return 0;
 }
 
+static ssize_t
+flash_gecko_get_size(const struct device *dev)
+{
+	ARG_UNUSED(dev);
+
+	return DT_PROP(SOC_NV_FLASH_NODE, erase_block_size);
+}
+
 static const struct flash_driver_api flash_gecko_driver_api = {
 	.read = flash_gecko_read,
 	.write = flash_gecko_write,
@@ -215,6 +223,7 @@ static const struct flash_driver_api flash_gecko_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = flash_gecko_page_layout,
 #endif
+	.size = flash_gecko_get_size,
 };
 
 static struct flash_gecko_data flash_gecko_0_data;

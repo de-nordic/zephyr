@@ -633,6 +633,13 @@ static int flash_flexspi_hyperflash_init(const struct device *dev)
 	return 0;
 }
 
+static ssize_t flash_flexspi_hyperflash_get_size(const struct device *dev)
+{
+	const struct flash_flexspi_hyperflash_config *config = dev->config;
+
+	return  config->flashSize;
+}
+
 static const struct flash_driver_api flash_flexspi_hyperflash_api = {
 	.read = flash_flexspi_hyperflash_read,
 	.write = flash_flexspi_hyperflash_write,
@@ -641,6 +648,7 @@ static const struct flash_driver_api flash_flexspi_hyperflash_api = {
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	.page_layout = flash_flexspi_hyperflash_pages_layout,
 #endif
+	.size = flash_flexspi_hyperflash_get_size,
 };
 
 #define CONCAT3(x, y, z) x ## y ## z

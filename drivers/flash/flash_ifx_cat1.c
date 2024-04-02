@@ -184,6 +184,11 @@ static int ifx_cat1_flash_init(const struct device *dev)
 	return 0;
 }
 
+static ssize_t ifx_cat1_flash_get_size(const struct device *dev)
+{
+	return DT_REG_SIZE(SOC_NV_FLASH_NODE);
+}
+
 static const struct flash_driver_api ifx_cat1_flash_driver_api = {
 	.read = ifx_cat1_flash_read,
 	.write = ifx_cat1_flash_write,
@@ -192,6 +197,7 @@ static const struct flash_driver_api ifx_cat1_flash_driver_api = {
 #ifdef CONFIG_FLASH_PAGE_LAYOUT
 	.page_layout = ifx_cat1_flash_page_layout,
 #endif
+	.size = ifx_cat1_flash_get_size,
 };
 
 static struct ifx_cat1_flash_data flash_data;

@@ -509,6 +509,13 @@ static int flash_npcx_nor_ex_op(const struct device *dev, uint16_t code,
 }
 #endif
 
+static size_t flash_npcx_nor_get_size(const struct device *dev)
+{
+	const struct flash_npcx_nor_config *config = dev->config;
+
+	return  config->layout.pages_count * config->layout.page_size;
+}
+
 static const struct flash_driver_api flash_npcx_nor_driver_api = {
 	.read = flash_npcx_nor_read,
 	.write = flash_npcx_nor_write,
@@ -524,6 +531,7 @@ static const struct flash_driver_api flash_npcx_nor_driver_api = {
 #ifdef CONFIG_FLASH_EX_OP_ENABLED
 	.ex_op = flash_npcx_nor_ex_op,
 #endif
+	.size = flash_npcx_nor_get_size,
 };
 
 static int flash_npcx_nor_init(const struct device *dev)
@@ -607,12 +615,11 @@ static const struct flash_npcx_nor_config flash_npcx_nor_config_##n = {		\
 		.qer_type = DT_INST_QUAD_EN_PROP_OR(n),				\
 		.rd_mode = DT_INST_STRING_TOKEN(n, rd_mode),			\
 	},									\
-	IF_ENABLED(CONFIG_FLASH_PAGE_LAYOUT, (					\
-		.layout = {							\
-			.pages_count = DT_INST_PROP(n, size) /			\
-				      (8 * SPI_NOR_PAGE_SIZE),			\
-			.pages_size  = SPI_NOR_PAGE_SIZE,			\
-		},))								\
+	.layout = {								\
+		.pages_count = DT_INST_PROP(n, size) /				\
+			      (8 * SPI_NOR_PAGE_SIZE),				\
+		.pages_size  = SPI_NOR_PAGE_SIZE,				\
+	},									\
 };										\
 static struct flash_npcx_nor_data flash_npcx_nor_data_##n;			\
 DEVICE_DT_INST_DEFINE(n, flash_npcx_nor_init, NULL,				\
