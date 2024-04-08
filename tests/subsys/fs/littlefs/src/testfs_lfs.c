@@ -9,15 +9,7 @@
 #include <zephyr/storage/flash_map.h>
 #include "testfs_lfs.h"
 
-#define SMALL_PARTITION		small_partition
-#define SMALL_PARTITION_ID	FIXED_PARTITION_ID(SMALL_PARTITION)
-
-#define MEDIUM_PARTITION	medium_partition
-#define MEDIUM_PARTITION_ID	FIXED_PARTITION_ID(MEDIUM_PARTITION)
-
-#define LARGE_PARTITION		large_partition
-#define LARGE_PARTITION_ID	FIXED_PARTITION_ID(LARGE_PARTITION)
-
+#if FIXED_PARTITION_EXISTS(SMALL_PARTITION)
 FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(small);
 struct fs_mount_t testfs_small_mnt = {
 	.type = FS_LITTLEFS,
@@ -25,8 +17,9 @@ struct fs_mount_t testfs_small_mnt = {
 	.storage_dev = (void *)SMALL_PARTITION_ID,
 	.mnt_point = TESTFS_MNT_POINT_SMALL,
 };
+#endif
 
-#if CONFIG_APP_TEST_CUSTOM
+#if FIXED_PARTITION_EXISTS(MEDIUM_PARTITION)
 FS_LITTLEFS_DECLARE_CUSTOM_CONFIG(medium, 4, MEDIUM_IO_SIZE, MEDIUM_IO_SIZE,
 				  MEDIUM_CACHE_SIZE, MEDIUM_LOOKAHEAD_SIZE);
 struct fs_mount_t testfs_medium_mnt = {
@@ -35,7 +28,9 @@ struct fs_mount_t testfs_medium_mnt = {
 	.storage_dev = (void *)MEDIUM_PARTITION_ID,
 	.mnt_point = TESTFS_MNT_POINT_MEDIUM,
 };
+#endif
 
+#if FIXED_PARTITION_EXISTS(LARGE_PARTITION)
 static uint8_t large_read_buffer[LARGE_CACHE_SIZE];
 static uint8_t large_prog_buffer[LARGE_CACHE_SIZE];
 static uint32_t large_lookahead_buffer[LARGE_LOOKAHEAD_SIZE / 4U];
@@ -57,8 +52,7 @@ struct fs_mount_t testfs_large_mnt = {
 	.storage_dev = (void *)LARGE_PARTITION_ID,
 	.mnt_point = TESTFS_MNT_POINT_LARGE,
 };
-
-#endif /* CONFIG_APP_TEST_CUSTOM */
+#endif
 
 int testfs_lfs_wipe_partition(const struct fs_mount_t *mp)
 {

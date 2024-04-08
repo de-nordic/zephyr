@@ -236,19 +236,23 @@ ZTEST(littlefs, test_lfs_perf)
 		k_sleep(K_MSEC(100));   /* flush log messages */
 		zassert_equal(small_8_1K_cust(), TC_PASS,
 			      "failed");
-
-		k_sleep(K_MSEC(100));   /* flush log messages */
-		zassert_equal(write_read("medium 32x2K dflt",
-					 &testfs_medium_mnt,
-					 2048, 32),
-			      TC_PASS,
-			      "failed");
-
-		k_sleep(K_MSEC(100));   /* flush log messages */
-		zassert_equal(write_read("large 64x4K dflt",
-					 &testfs_large_mnt,
-					 4096, 64),
-			      TC_PASS,
-			      "failed");
 	}
+
+#if FIXED_PARTITION_EXISTS(MEDIUM_PARTITION)
+	k_sleep(K_MSEC(100));   /* flush log messages */
+	zassert_equal(write_read("medium 32x2K dflt",
+				 &testfs_medium_mnt,
+				 2048, 32),
+		      TC_PASS,
+		      "failed");
+#endif
+
+#if FIXED_PARTITION_EXISTS(LARGE_PARTITION)
+	k_sleep(K_MSEC(100));   /* flush log messages */
+	zassert_equal(write_read("large 64x4K dflt",
+				 &testfs_large_mnt,
+				 4096, 64),
+		      TC_PASS,
+		      "failed");
+#endif
 }

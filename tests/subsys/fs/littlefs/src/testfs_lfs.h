@@ -10,6 +10,15 @@
 #include <zephyr/fs/fs.h>
 #include "../../common/test_fs_util.h"
 
+#define SMALL_PARTITION		small_partition
+#define SMALL_PARTITION_ID	FIXED_PARTITION_ID(SMALL_PARTITION)
+
+#define MEDIUM_PARTITION	medium_partition
+#define MEDIUM_PARTITION_ID	FIXED_PARTITION_ID(MEDIUM_PARTITION)
+
+#define LARGE_PARTITION		large_partition
+#define LARGE_PARTITION_ID	FIXED_PARTITION_ID(LARGE_PARTITION)
+
 #define TESTFS_MNT_POINT_SMALL "/sml"
 #define TESTFS_MNT_POINT_MEDIUM "/med"
 #define TESTFS_MNT_POINT_LARGE "/lrg"

@@ -69,6 +69,7 @@ static int clean_statvfs(const struct fs_mount_t *mp)
 	return TC_PASS;
 }
 
+#if FIXED_PARTITION_EXISTS(MEDIUM_PARTITION)
 static int check_medium(void)
 {
 	struct fs_mount_t *mp = &testfs_medium_mnt;
@@ -100,7 +101,9 @@ static int check_medium(void)
 
 	return TC_PASS;
 }
+#endif
 
+#if FIXED_PARTITION_EXISTS(LARGE_PARTITION)
 static int check_large(void)
 {
 	struct fs_mount_t *mp = &testfs_large_mnt;
@@ -132,6 +135,7 @@ static int check_large(void)
 
 	return TC_PASS;
 }
+#endif
 
 static int num_files(struct fs_mount_t *mp)
 {
@@ -240,6 +244,7 @@ struct fs_mount_t *fs_basic_test_mp = &testfs_small_mnt;
 
 ZTEST(littlefs, test_lfs_basic)
 {
+#if FIXED_PARTITION_EXISTS(SMALL_PARTITION)
 	struct fs_mount_t *mp = &testfs_small_mnt;
 
 	zassert_equal(clear_partition(mp), TC_PASS,
@@ -267,12 +272,15 @@ ZTEST(littlefs, test_lfs_basic)
 	TC_PRINT("unmounting %s\n", mp->mnt_point);
 	zassert_equal(fs_unmount(mp), 0,
 		      "unmount small failed");
+#endif
 
-	if (IS_ENABLED(CONFIG_APP_TEST_CUSTOM)) {
-		zassert_equal(check_medium(), TC_PASS,
-			      "check medium failed");
+#if FIXED_PARTITION_EXISTS(MEDIUM_PARTITION)
+	zassert_equal(check_medium(), TC_PASS,
+		      "check medium failed");
+#endif
 
-		zassert_equal(check_large(), TC_PASS,
-			      "check large failed");
-	}
+#if FIXED_PARTITION_EXISTS(LARGE_PARTITION)
+	zassert_equal(check_large(), TC_PASS,
+		      "check large failed");
+#endif
 }

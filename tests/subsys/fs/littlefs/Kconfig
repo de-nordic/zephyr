@@ -7,3 +7,4 @@ source "Kconfig.zephyr"
 
 config APP_TEST_CUSTOM
 	bool "Select to test additional custom filesystem configurations"
+	depends on $(dt_nodelabel_enabled,small_partition)
