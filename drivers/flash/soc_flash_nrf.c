@@ -36,6 +36,7 @@ LOG_MODULE_REGISTER(flash_nrf);
 #endif
 
 #define SOC_NV_FLASH_NODE DT_INST(0, soc_nv_flash)
+#define SOC_UICR_NODE	DT_INST(0, nordic_nrf_uicr)
 
 #ifndef CONFIG_SOC_FLASH_NRF_RADIO_SYNC_NONE
 #define FLASH_SLOT_WRITE     7500
@@ -142,47 +143,22 @@ static void nvmc_wait_ready(void)
 	}
 }
 
-static int flash_nrf_read(const struct device *dev, off_t addr,
+static int flash_nrf_common_read(const struct device *dev, off_t addr,
 			    void *data, size_t len)
 {
-	const bool within_uicr = is_uicr_addr_valid(addr, len);
-
-	if (is_regular_addr_valid(addr, len)) {
-		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
-	} else if (!within_uicr) {
-		LOG_ERR("invalid address: 0x%08lx:%zu",
-				(unsigned long)addr, len);
-		return -EINVAL;
-	}
-
 	if (!len) {
 		return 0;
 	}
-
-#if CONFIG_SOC_FLASH_NRF_UICR && IS_ENABLED(NRF91_ERRATA_7_ENABLE_WORKAROUND)
-	if (within_uicr) {
-		nrf_buffer_read_91_uicr(data, (uint32_t)addr, len);
-		return 0;
-	}
-#endif
 
 	nrf_nvmc_buffer_read(data, (uint32_t)addr, len);
 
 	return 0;
 }
 
-static int flash_nrf_write(const struct device *dev, off_t addr,
+static int flash_nrf_common_write(const struct device *dev, off_t addr,
 			     const void *data, size_t len)
 {
 	int ret;
-
-	if (is_regular_addr_valid(addr, len)) {
-		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
-	} else if (!is_uicr_addr_valid(addr, len)) {
-		LOG_ERR("invalid address: 0x%08lx:%zu",
-				(unsigned long)addr, len);
-		return -EINVAL;
-	}
 
 #if !IS_ENABLED(CONFIG_SOC_FLASH_NRF_EMULATE_ONE_BYTE_WRITE_ACCESS)
 	if (!is_aligned_32(addr) || (len % sizeof(uint32_t))) {
@@ -212,38 +188,9 @@ static int flash_nrf_write(const struct device *dev, off_t addr,
 	return ret;
 }
 
-static int flash_nrf_erase(const struct device *dev, off_t addr, size_t size)
+static int flash_nrf_common_erase(const struct device *dev, off_t addr, size_t size)
 {
-	uint32_t pg_size = nrfx_nvmc_flash_page_size_get();
-	uint32_t n_pages = size / pg_size;
 	int ret;
-
-	if (is_regular_addr_valid(addr, size)) {
-		/* Erase can only be done per page */
-		if (((addr % pg_size) != 0) || ((size % pg_size) != 0)) {
-			LOG_ERR("unaligned address: 0x%08lx:%zu",
-					(unsigned long)addr, size);
-			return -EINVAL;
-		}
-
-		if (!n_pages) {
-			return 0;
-		}
-
-		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
-#ifdef CONFIG_SOC_FLASH_NRF_UICR
-	} else if (addr != (off_t)NRF_UICR || size != sizeof(*NRF_UICR)) {
-		LOG_ERR("invalid address: 0x%08lx:%zu",
-				(unsigned long)addr, size);
-		return -EINVAL;
-	}
-#else
-	} else {
-		LOG_ERR("invalid address: 0x%08lx:%zu",
-				(unsigned long)addr, size);
-		return -EINVAL;
-	}
-#endif /* CONFIG_SOC_FLASH_NRF_UICR */
 
 	SYNC_LOCK();
 
@@ -259,6 +206,118 @@ static int flash_nrf_erase(const struct device *dev, off_t addr, size_t size)
 	SYNC_UNLOCK();
 
 	return ret;
+}
+
+static int flash_nrf_read(const struct device *dev, off_t addr,
+			    void *data, size_t len)
+{
+	if (is_regular_addr_valid(addr, len)) {
+		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
+	} else {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, len);
+		return -EINVAL;
+	}
+
+	if (!len) {
+		return 0;
+	}
+
+	return flash_nrf_common_read(dev, (uint32_t)addr, data, len);
+}
+
+static int flash_nrf_write(const struct device *dev, off_t addr,
+			     const void *data, size_t len)
+{
+	if (is_regular_addr_valid(addr, len)) {
+		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
+	} else {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, len);
+		return -EINVAL;
+	}
+
+#if !IS_ENABLED(CONFIG_SOC_FLASH_NRF_EMULATE_ONE_BYTE_WRITE_ACCESS)
+	if (!is_aligned_32(addr) || (len % sizeof(uint32_t))) {
+		LOG_ERR("not word-aligned: 0x%08lx:%zu",
+				(unsigned long)addr, len);
+		return -EINVAL;
+	}
+#endif
+
+	return flash_nrf_common_write(dev, addr, data, len);
+}
+
+static int flash_nrf_erase(const struct device *dev, off_t addr, size_t size)
+{
+	uint32_t pg_size = nrfx_nvmc_flash_page_size_get();
+	uint32_t n_pages = size / pg_size;
+
+	if (is_regular_addr_valid(addr, size)) {
+		/* Erase can only be done per page */
+		if (((addr % pg_size) != 0) || ((size % pg_size) != 0)) {
+			LOG_ERR("unaligned address: 0x%08lx:%zu",
+					(unsigned long)addr, size);
+			return -EINVAL;
+		}
+
+		if (!n_pages) {
+			return 0;
+		}
+
+		addr += DT_REG_ADDR(SOC_NV_FLASH_NODE);
+	} else {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, size);
+		return -EINVAL;
+	}
+
+	return flash_nrf_common_erase(dev, addr, size);
+}
+
+static int flash_nrf_uicr_read(const struct device *dev, off_t addr,
+			    void *data, size_t len)
+{
+	const bool within_uicr = is_uicr_addr_valid(addr, len);
+
+	if (!within_uicr) {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, len);
+		return -EINVAL;
+	}
+
+#if CONFIG_SOC_FLASH_NRF_UICR && IS_ENABLED(NRF91_ERRATA_7_ENABLE_WORKAROUND)
+	if (within_uicr) {
+		nrf_buffer_read_91_uicr(data, (uint32_t)addr, len);
+		return 0;
+	}
+#endif
+
+	return flash_nrf_common_read(data, (uint32_t)addr, data, len);
+}
+
+static int flash_nrf_uicr_write(const struct device *dev, off_t addr,
+			     const void *data, size_t len)
+{
+	if (!is_uicr_addr_valid(addr, len)) {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, len);
+		return -EINVAL;
+	}
+
+
+	return flash_nrf_common_write(dev, addr, data, len);
+}
+
+static int flash_nrf_uicr_erase(const struct device *dev, off_t addr, size_t size)
+{
+	if (addr != (off_t)NRF_UICR || size != sizeof(*NRF_UICR)) {
+		LOG_ERR("invalid address: 0x%08lx:%zu",
+				(unsigned long)addr, size);
+		return -EINVAL;
+	}
+
+	return flash_nrf_common_erase(dev, addr, size);
 }
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
@@ -307,10 +366,25 @@ static int nrf_flash_init(const struct device *dev)
 	return 0;
 }
 
+static const struct flash_driver_api flash_nrf_uicr_api = {
+	.read = flash_nrf_uicr_read,
+	.write = flash_nrf_uicr_write,
+	.erase = flash_nrf_uicr_erase,
+	.get_parameters = flash_nrf_get_parameters,
+#if defined(CONFIG_FLASH_PAGE_LAYOUT)
+	.page_layout = NULL,
+#endif
+};
+
 DEVICE_DT_INST_DEFINE(0, nrf_flash_init, NULL,
 		 NULL, NULL,
 		 POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,
 		 &flash_nrf_api);
+
+DEVICE_DT_DEFINE(SOC_UICR_NODE, NULL, NULL,
+		 NULL, NULL,
+		 POST_KERNEL, CONFIG_FLASH_INIT_PRIORITY,
+		 &flash_nrf_uicr_api);
 
 #ifndef CONFIG_SOC_FLASH_NRF_RADIO_SYNC_NONE
 
