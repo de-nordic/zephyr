@@ -376,6 +376,30 @@ uint8_t flash_area_erased_val(const struct flash_area *fa);
 #define FIXED_PARTITION_NODE_DEVICE(node) \
 	DEVICE_DT_GET(DT_MTD_FROM_FIXED_PARTITION(node))
 
+/**
+ * Get pointer to flash_area object by partition label
+ *
+ * @param label DTS node label of a partition
+ *
+ * @return Pointer to flash_area type object representing partition
+ */
+#define FIXED_PARTITION(part) FIXED_PARTITION_1(DT_NODELABEL(part))
+#define FIXED_PARTITION_1(part) FIXED_PARTITION_0(DT_DEP_ORD(part))
+#define FIXED_PARTITION_0(part) \
+	(const struct flash_area *)&DT_CAT(global_fixed_partition_, part)
+
+/** @cond INTERNAL_HIDDEN */
+#define DECLARE_PARTITION(part) _DECLARE_PARTITION(DT_DEP_ORD(part))
+#define _DECLARE_PARTITION(part) \
+	extern const struct flash_area DT_CAT(global_fixed_partition_, part);
+#define FOR_EACH_PARTITION_TABLE(table)\
+	DT_FOREACH_CHILD(table, DECLARE_PARTITION)
+DT_FOREACH_STATUS_OKAY(fixed_partitions, FOR_EACH_PARTITION_TABLE)
+#undef DECLARE_PARTITION
+#undef _DECLARE_PARTITION
+#undef FOR_EACH_PARTITION_TABLE
+/** @endcond */
+
 #ifdef __cplusplus
 }
 #endif
