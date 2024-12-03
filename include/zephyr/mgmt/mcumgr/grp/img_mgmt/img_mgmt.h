@@ -192,8 +192,8 @@ struct img_mgmt_upload_req {
 
 /** Global state for upload in progress. */
 struct img_mgmt_state {
-	/** Flash area being written; -1 if no upload in progress. */
-	int area_id;
+	/** Flash area being written; NULL if no upload in progress. */
+	const struct flash_area *area;
 	/** Flash offset of next chunk. */
 	size_t off;
 	/** Total size of image data. */
@@ -210,7 +210,7 @@ struct img_mgmt_upload_action {
 	/** The number of image bytes to write to flash. */
 	int write_bytes;
 	/** The flash area to write to. */
-	int area_id;
+	const struct flash_area *area;
 	/** Whether to process the request; false if offset is wrong. */
 	bool proceed;
 	/** Whether to erase the destination flash area. */

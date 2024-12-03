@@ -101,26 +101,18 @@ static int img_mgmt_flash_check_empty_inner(const struct flash_area *fa)
 #ifndef CONFIG_IMG_ERASE_PROGRESSIVELY
 /* Check if area is empty
  *
- * @param	fa_id	ID of flash area to scan.
+ * @param	fa	flash area to scan.
  *
  * @return	0 when not empty, 1 when empty, negative errno code on error.
  */
-static int img_mgmt_flash_check_empty(uint8_t fa_id)
+static int img_mgmt_flash_check_empty(const struct flash_area *fa)
 {
-	const struct flash_area *fa;
-	int rc;
-
-	rc = flash_area_open(fa_id, &fa);
-	if (rc == 0) {
-		rc = img_mgmt_flash_check_empty_inner(fa);
-
-		flash_area_close(fa);
-	} else {
-		LOG_ERR("Failed to open flash area ID %u: %d", fa_id, rc);
-		rc = IMG_MGMT_ERR_FLASH_OPEN_FAILED;
+	if (!flash_area_device_is_ready(fa)) {
+		LOG_ERR("Flash area %p device not ready", fa);
+		return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 	}
 
-	return rc;
+	return img_mgmt_flash_check_empty_inner(fa);
 }
 #endif
 
@@ -130,50 +122,49 @@ static int img_mgmt_flash_check_empty(uint8_t fa_id)
  * image_2 and so on. The function treats slot numbers as absolute
  * slot number starting at 0.
  */
-int
-img_mgmt_flash_area_id(int slot)
+const struct flash_area *img_mgmt_flash_area(int slot)
 {
-	uint8_t fa_id;
+	const struct flash_area *fa;
 
 	switch (slot) {
 	case 0:
-		fa_id = FIXED_PARTITION_ID(SLOT0_PARTITION);
+		fa = FIXED_PARTITION(SLOT0_PARTITION);
 		break;
 
 	case 1:
-		fa_id = FIXED_PARTITION_ID(SLOT1_PARTITION);
+		fa = FIXED_PARTITION(SLOT1_PARTITION);
 		break;
 
 #if FIXED_PARTITION_EXISTS(SLOT2_PARTITION)
 	case 2:
-		fa_id = FIXED_PARTITION_ID(SLOT2_PARTITION);
+		fa = FIXED_PARTITION(SLOT2_PARTITION);
 		break;
 #endif
 
 #if FIXED_PARTITION_EXISTS(SLOT3_PARTITION)
 	case 3:
-		fa_id = FIXED_PARTITION_ID(SLOT3_PARTITION);
+		fa = FIXED_PARTITION(SLOT3_PARTITION);
 		break;
 #endif
 
 #if FIXED_PARTITION_EXISTS(SLOT4_PARTITION)
 	case 4:
-		fa_id = FIXED_PARTITION_ID(SLOT4_PARTITION);
+		fa = FIXED_PARTITION(SLOT4_PARTITION);
 		break;
 #endif
 
 #if FIXED_PARTITION_EXISTS(SLOT5_PARTITION)
 	case 5:
-		fa_id = FIXED_PARTITION_ID(SLOT5_PARTITION);
+		fa = FIXED_PARTITION(SLOT5_PARTITION);
 		break;
 #endif
 
 	default:
-		fa_id = -1;
+		fa = NULL;
 		break;
 	}
 
-	return fa_id;
+	return fa;
 }
 
 #if CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER == 1
@@ -185,15 +176,15 @@ img_mgmt_flash_area_id(int slot)
  * slot is available, and allowed, for DFU; providing 0 as a parameter means
  * find any unused and non-active available (auto-select); any other positive
  * value is direct (slot + 1) to be used; if checks are positive, then area
- * ID is returned, -1 is returned otherwise.
+ * is returned, NULL is returned otherwise.
  * Note that auto-selection is performed only between the two first slots.
  */
-static int img_mgmt_get_unused_slot_area_id(int slot)
+static const struct flash_area *img_mgmt_get_unused_slot_area(int slot)
 {
 #if defined(CONFIG_MCUMGR_GRP_IMG_DIRECT_UPLOAD)
 	slot--;
 	if (slot < -1) {
-		return -1;
+		return NULL;
 	} else if (slot == -1) {
 #endif
 		/*
@@ -203,14 +194,14 @@ static int img_mgmt_get_unused_slot_area_id(int slot)
 		 */
 		for (slot = 0; slot < 2; slot++) {
 			if (img_mgmt_slot_in_use(slot) == 0) {
-				int area_id = img_mgmt_flash_area_id(slot);
+				const struct flash_area *area = img_mgmt_flash_area(slot);
 
-				if (area_id >= 0) {
-					return area_id;
+				if (area != NULL) {
+					return area;
 				}
 			}
 		}
-		return -1;
+		return NULL;
 #if defined(CONFIG_MCUMGR_GRP_IMG_DIRECT_UPLOAD)
 	}
 	/*
@@ -218,26 +209,26 @@ static int img_mgmt_get_unused_slot_area_id(int slot)
 	 * and unused; the all other slots are just checked for availability.
 	 */
 	if (slot < 2) {
-		slot = img_mgmt_slot_in_use(slot) == 0 ? slot : -1;
+		slot = img_mgmt_slot_in_use(slot) == 0 ? slot : NULL;
 	}
 
 	/* Return area ID for the slot or -1 */
-	return slot != -1  ? img_mgmt_flash_area_id(slot) : -1;
+	return slot != -1  ? img_mgmt_flash_area(slot) : NULL;
 #endif
 }
 #elif CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER >= 2
-static int img_mgmt_get_unused_slot_area_id(unsigned int image)
+static const struct flash_area *img_mgmt_get_unused_slot_area(unsigned int image)
 {
-	int area_id = -1;
+	int area = NULL;
 	int slot = 0;
 
 	slot = img_mgmt_get_opposite_slot(img_mgmt_active_slot(image));
 
 	if (!img_mgmt_slot_in_use(slot)) {
-		area_id = img_mgmt_flash_area_id(slot);
+		area = img_mgmt_flash_area(slot);
 	}
 
-	return area_id;
+	return area;
 }
 #else
 #error "Unsupported number of images"
@@ -276,18 +267,15 @@ int img_mgmt_vercmp(const struct image_version *a, const struct image_version *b
 
 int img_mgmt_erase_slot(int slot)
 {
-	const struct flash_area *fa;
+	const struct flash_area *fa = img_mgmt_flash_area(slot);
 	int rc;
-	int area_id = img_mgmt_flash_area_id(slot);
 
-	if (area_id < 0) {
+	if (fa == NULL) {
 		return IMG_MGMT_ERR_INVALID_SLOT;
 	}
 
-	rc = flash_area_open(area_id, &fa);
-
-	if (rc < 0) {
-		LOG_ERR("Failed to open flash area ID %u: %d", area_id, rc);
+	if (!flash_area_device_is_ready(fa)) {
+		LOG_ERR("Flash area %p device not ready", fa);
 		return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 	}
 
@@ -306,8 +294,6 @@ int img_mgmt_erase_slot(int slot)
 		 */
 		rc = 0;
 	}
-
-	flash_area_close(fa);
 
 	return rc;
 }
@@ -344,22 +330,19 @@ int img_mgmt_write_confirmed(void)
 
 int img_mgmt_read(int slot, unsigned int offset, void *dst, unsigned int num_bytes)
 {
-	const struct flash_area *fa;
+	const struct flash_area *fa = img_mgmt_flash_area(slot);
 	int rc;
-	int area_id = img_mgmt_flash_area_id(slot);
 
-	if (area_id < 0) {
+	if (fa == NULL) {
 		return IMG_MGMT_ERR_INVALID_SLOT;
 	}
 
-	rc = flash_area_open(area_id, &fa);
-	if (rc != 0) {
-		LOG_ERR("Failed to open flash area ID %u: %d", area_id, rc);
+	if (!flash_area_device_is_ready(fa)) {
+		LOG_ERR("Flash area %p device not ready", fa);
 		return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 	}
 
 	rc = flash_area_read(fa, offset, dst, num_bytes);
-	flash_area_close(fa);
 
 	if (rc != 0) {
 		LOG_ERR("Failed to read data from flash: %d", rc);
@@ -398,7 +381,7 @@ int img_mgmt_write_image_data(unsigned int offset, const void *data, unsigned in
 			return IMG_MGMT_ERR_NO_FREE_MEMORY;
 		}
 
-		if (flash_img_init_id(ctx, g_img_mgmt_state.area_id) != 0) {
+		if (flash_img_init(ctx, g_img_mgmt_state.area) != 0) {
 			rc = IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 			goto out;
 		}
@@ -424,7 +407,7 @@ int img_mgmt_write_image_data(unsigned int offset, const void *data, unsigned in
 	static struct flash_img_context ctx;
 
 	if (offset == 0) {
-		if (flash_img_init_id(&ctx, g_img_mgmt_state.area_id) != 0) {
+		if (flash_img_init(&ctx, g_img_mgmt_state.area) != 0) {
 			return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 		}
 	}
@@ -439,7 +422,7 @@ int img_mgmt_write_image_data(unsigned int offset, const void *data, unsigned in
 
 int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 {
-	const struct flash_area *fa;
+	const struct flash_area *const fa = g_img_mgmt_state.area;
 	int rc;
 
 	if (off != 0) {
@@ -447,9 +430,8 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 		goto end;
 	}
 
-	rc = flash_area_open(g_img_mgmt_state.area_id, &fa);
-	if (rc != 0) {
-		LOG_ERR("Can't bind to the flash area (err %d)", rc);
+	if (!flash_area_device_is_ready(fa)) {
+		LOG_ERR("Flash area %p device not ready", fa);
 		rc = IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 		goto end;
 	}
@@ -459,7 +441,7 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 
 	if (dev == NULL) {
 		rc = IMG_MGMT_ERR_FLASH_AREA_DEVICE_NULL;
-		goto end_fa;
+		goto end;
 	}
 	struct flash_pages_info page;
 	off_t page_offset = fa->fa_off + num_bytes - 1;
@@ -468,7 +450,7 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 	if (rc != 0) {
 		LOG_ERR("bad offset (0x%lx)", (long)page_offset);
 		rc = IMG_MGMT_ERR_INVALID_PAGE_OFFSET;
-		goto end_fa;
+		goto end;
 	}
 
 	size_t erase_size = page.start_offset + page.size - fa->fa_off;
@@ -479,7 +461,7 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 		LOG_ERR("image slot erase of 0x%zx bytes failed (err %d)", erase_size,
 				rc);
 		rc = IMG_MGMT_ERR_FLASH_ERASE_FAILED;
-		goto end_fa;
+		goto end;
 	}
 
 	LOG_INF("Erased 0x%zx bytes of image slot", erase_size);
@@ -503,7 +485,7 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 			LOG_ERR("image slot trailer erase of 0x%zx bytes failed (err %d)",
 					erase_size, rc);
 			rc = IMG_MGMT_ERR_FLASH_ERASE_FAILED;
-			goto end_fa;
+			goto end;
 		}
 
 		LOG_INF("Erased 0x%zx bytes of image slot trailer", erase_size);
@@ -511,8 +493,6 @@ int img_mgmt_erase_image_data(unsigned int off, unsigned int num_bytes)
 #endif
 	rc = IMG_MGMT_ERR_OK;
 
-end_fa:
-	flash_area_close(fa);
 end:
 	return rc;
 }
@@ -565,7 +545,6 @@ int img_mgmt_upload_inspect(const struct img_mgmt_upload_req *req,
 
 	if (req->off == 0) {
 		/* First upload chunk. */
-		const struct flash_area *fa;
 #if defined(CONFIG_MCUMGR_GRP_IMG_TOO_LARGE_SYSBUILD) &&			\
 	(defined(CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_WITHOUT_SCRATCH) ||	\
 	 defined(CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_SCRATCH) ||		\
@@ -575,7 +554,6 @@ int img_mgmt_upload_inspect(const struct img_mgmt_upload_req *req,
 	 defined(CONFIG_MCUBOOT_BOOTLOADER_MODE_DIRECT_XIP_WITH_REVERT)) &&	\
 	CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE > 0
 		const struct flash_area *fa_current;
-		int current_img_area;
 #elif defined(CONFIG_MCUMGR_GRP_IMG_TOO_LARGE_BOOTLOADER_INFO)
 		int max_image_size;
 #endif
@@ -610,7 +588,7 @@ int img_mgmt_upload_inspect(const struct img_mgmt_upload_req *req,
 		 * the same data hash so we can just resume it by simply including
 		 * current upload offset in response.
 		 */
-		if ((req->data_sha.len > 0) && (g_img_mgmt_state.area_id != -1)) {
+		if ((req->data_sha.len > 0) && (g_img_mgmt_state.area != NULL)) {
 			if ((g_img_mgmt_state.data_sha_len == req->data_sha.len) &&
 			    !memcmp(g_img_mgmt_state.data_sha, req->data_sha.value,
 				    req->data_sha.len)) {
@@ -618,27 +596,26 @@ int img_mgmt_upload_inspect(const struct img_mgmt_upload_req *req,
 			}
 		}
 
-		action->area_id = img_mgmt_get_unused_slot_area_id(req->image);
-		if (action->area_id < 0) {
+		action->area = img_mgmt_get_unused_slot_area(req->image);
+		if (action->area == NULL) {
 			/* No slot where to upload! */
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action, img_mgmt_err_str_no_slot);
 			return IMG_MGMT_ERR_NO_FREE_SLOT;
 		}
 
-		rc = flash_area_open(action->area_id, &fa);
-		if (rc) {
+		if (!flash_area_device_is_ready(action->area)) {
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 				img_mgmt_err_str_flash_open_failed);
-			LOG_ERR("Failed to open flash area ID %u: %d", action->area_id, rc);
+			LOG_ERR("Flash area %p device not ready", action->area);
 			return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 		}
 
 		/* Check that the area is of sufficient size to store the new image */
-		if (req->size > fa->fa_size) {
+		if (req->size > action->area->fa_size) {
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 				img_mgmt_err_str_image_too_large);
-			flash_area_close(fa);
-			LOG_ERR("Upload too large for slot: %u > %u", req->size, fa->fa_size);
+			LOG_ERR("Upload too large for slot: %u > %u", req->size,
+				action->area->fa_size);
 			return IMG_MGMT_ERR_INVALID_IMAGE_TOO_LARGE;
 		}
 
@@ -653,43 +630,37 @@ int img_mgmt_upload_inspect(const struct img_mgmt_upload_req *req,
 		/* Check if slot1 is larger than slot0 by the update size, if so then the size
 		 * check can be skipped because the devicetree partitions are okay
 		 */
-		current_img_area = img_mgmt_flash_area_id(req->image);
+		fa_current = img_mgmt_flash_area(req->image);
 
-		if (current_img_area < 0) {
+		if (fa_current == NULL) {
 			/* Current slot cannot be determined */
-			LOG_ERR("Failed to determine active slot for image %d: %d", req->image,
-				current_img_area);
+			LOG_ERR("Failed to determine active slot for image %d", req->image,
 			return IMG_MGMT_ERR_ACTIVE_SLOT_NOT_KNOWN;
 		}
 
-		rc = flash_area_open(current_img_area, &fa_current);
-		if (rc) {
+		if (!flash_area_device_is_ready(fa_current)) {
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 				img_mgmt_err_str_flash_open_failed);
-			LOG_ERR("Failed to open flash area ID %u: %d", current_img_area, rc);
-			flash_area_close(fa);
+			LOG_ERR("Flash area %p device is not ready", fa_current);
 			return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 		}
 
-		flash_area_close(fa_current);
-
 		LOG_DBG("Primary size: %d, secondary size: %d, overhead: %d, max update size: %d",
-			fa_current->fa_size, fa->fa_size, CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE,
-			(fa->fa_size + CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE));
+			fa_current->fa_size, action->area->fa_size, CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE,
+			(action->area->fa_size + CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE));
 
-		if (fa_current->fa_size >= (fa->fa_size + CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE)) {
+		if (fa_current->fa_size >= (action->area->fa_size + CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE)) {
 			/* Upgrade slot is of sufficient size, nothing to check */
 			LOG_INF("Upgrade slots already sized appropriately, "
 				"CONFIG_MCUMGR_GRP_IMG_TOO_LARGE_SYSBUILD is not needed");
 			goto skip_size_check;
 		}
 
-		if (req->size > (fa->fa_size - CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE)) {
+		if (req->size > (action->area>fa_size - CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE)) {
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 				img_mgmt_err_str_image_too_large);
-			flash_area_close(fa);
 			LOG_ERR("Upload too large for slot (with end offset): %u > %u", req->size,
-				(fa->fa_size - CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE));
+				(action->area->fa_size - CONFIG_MCUBOOT_UPDATE_FOOTER_SIZE));
 			return IMG_MGMT_ERR_INVALID_IMAGE_TOO_LARGE;
 		}
 
@@ -702,7 +673,6 @@ skip_size_check:
 		    req->size > max_image_size) {
 			IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 				img_mgmt_err_str_image_too_large);
-			flash_area_close(fa);
 			LOG_ERR("Upload too large for slot (with max image size): %u > %u",
 				req->size, max_image_size);
 			return IMG_MGMT_ERR_INVALID_IMAGE_TOO_LARGE;
@@ -711,16 +681,14 @@ skip_size_check:
 
 #if defined(CONFIG_MCUMGR_GRP_IMG_REJECT_DIRECT_XIP_MISMATCHED_SLOT)
 		if (hdr->ih_flags & IMAGE_F_ROM_FIXED) {
-			if (fa->fa_off != hdr->ih_load_addr) {
+			if (action->area->fa_off != hdr->ih_load_addr) {
 				IMG_MGMT_UPLOAD_ACTION_SET_RC_RSN(action,
 					img_mgmt_err_str_image_bad_flash_addr);
-				flash_area_close(fa);
 				return IMG_MGMT_ERR_INVALID_FLASH_ADDRESS;
 			}
 		}
 #endif
 
-		flash_area_close(fa);
 
 		if (req->upgrade) {
 			/* User specified upgrade-only. Make sure new image version is
@@ -739,7 +707,7 @@ skip_size_check:
 		}
 
 #ifndef CONFIG_IMG_ERASE_PROGRESSIVELY
-		rc = img_mgmt_flash_check_empty(action->area_id);
+		rc = img_mgmt_flash_check_empty(action->area);
 		if (rc < 0) {
 			return rc;
 		}
@@ -748,7 +716,7 @@ skip_size_check:
 #endif
 	} else {
 		/* Continuation of upload. */
-		action->area_id = g_img_mgmt_state.area_id;
+		action->area = g_img_mgmt_state.area;
 		action->size = g_img_mgmt_state.size;
 
 		if (req->off != g_img_mgmt_state.off) {
@@ -777,22 +745,13 @@ skip_size_check:
 
 int img_mgmt_erased_val(int slot, uint8_t *erased_val)
 {
-	const struct flash_area *fa;
-	int rc;
-	int area_id = img_mgmt_flash_area_id(slot);
+	const struct flash_area *fa = img_mgmt_flash_area(slot);
 
-	if (area_id < 0) {
+	if (fa == NULL) {
 		return IMG_MGMT_ERR_INVALID_SLOT;
 	}
 
-	rc = flash_area_open(area_id, &fa);
-	if (rc != 0) {
-		LOG_ERR("Failed to open flash area ID %u: %d", area_id, rc);
-		return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
-	}
-
 	*erased_val = flash_area_erased_val(fa);
-	flash_area_close(fa);
 
 	return 0;
 }

@@ -398,7 +398,7 @@ static void img_mgmt_reset_upload(void)
 {
 	img_mgmt_take_lock();
 	memset(&g_img_mgmt_state, 0, sizeof(g_img_mgmt_state));
-	g_img_mgmt_state.area_id = -1;
+	g_img_mgmt_state.area = NULL;
 	img_mgmt_release_lock();
 }
 
@@ -497,8 +497,7 @@ static int img_mgmt_slot_info(struct smp_streamer *ctxt)
 	     zcbor_list_start_encode(zse, 10);
 
 	while (i < CONFIG_MCUMGR_GRP_IMG_UPDATABLE_IMAGE_NUMBER * SLOTS_PER_IMAGE) {
-		const struct flash_area *fa;
-		int area_id = img_mgmt_flash_area_id(i);
+		const struct flash_area *const fa = img_mgmt_flash_area(i);
 
 		if ((i % SLOTS_PER_IMAGE) == 0) {
 			memset(area_sizes, 0, sizeof(area_sizes));
@@ -522,14 +521,12 @@ static int img_mgmt_slot_info(struct smp_streamer *ctxt)
 			goto finish;
 		}
 
-		rc = flash_area_open(area_id, &fa);
-
-		if (rc) {
+		if (!flash_area_device_is_ready(flash_area)) {
 			/* Failed opening slot, mark as error */
 			ok = zcbor_tstr_put_lit(zse, "rc") &&
-			     zcbor_int32_put(zse, rc);
+			     zcbor_int32_put(zse, -ENODEV);
 
-			LOG_ERR("Failed to open slot %d for information fetching: %d", area_id, rc);
+			LOG_ERR("Device for flash area %p is not ready", flash_area);
 		} else {
 #if defined(CONFIG_MCUMGR_GRP_IMG_SLOT_INFO_HOOKS)
 			struct img_mgmt_slot_info_slot slot_info_data = {
@@ -577,8 +574,6 @@ static int img_mgmt_slot_info(struct smp_streamer *ctxt)
 						      &slot_info_data, sizeof(slot_info_data),
 						      &err_rc, &err_group);
 #endif
-
-			flash_area_close(fa);
 
 #if defined(CONFIG_MCUMGR_GRP_IMG_SLOT_INFO_HOOKS)
 			if (status != MGMT_CB_OK) {
@@ -825,7 +820,7 @@ defined(CONFIG_MCUMGR_SMP_COMMAND_STATUS_HOOKS)
 #endif
 
 	/* Remember flash area ID and image size for subsequent upload requests. */
-	g_img_mgmt_state.area_id = action.area_id;
+	g_img_mgmt_state.area = action.area;
 	g_img_mgmt_state.size = action.size;
 
 	if (req.off == 0) {
@@ -868,7 +863,7 @@ defined(CONFIG_MCUMGR_SMP_COMMAND_STATUS_HOOKS)
 			fic.match = g_img_mgmt_state.data_sha;
 			fic.clen = g_img_mgmt_state.size;
 
-			if (flash_img_check(&ctx, &fic, g_img_mgmt_state.area_id) == 0) {
+			if (flash_img_check(&ctx, &fic, g_img_mgmt_state.area) == 0) {
 				/* Underlying data already matches, no need to upload any more,
 				 * set offset to image size so client knows upload has finished.
 				 */
@@ -940,13 +935,13 @@ defined(CONFIG_MCUMGR_SMP_COMMAND_STATUS_HOOKS)
 #ifdef CONFIG_IMG_ENABLE_IMAGE_CHECK
 			static struct flash_img_context ctx;
 
-			if (flash_img_init_id(&ctx, g_img_mgmt_state.area_id) == 0) {
+			if (flash_img_init(&ctx, g_img_mgmt_state.area) == 0) {
 				struct flash_img_check fic = {
 					.match = g_img_mgmt_state.data_sha,
 					.clen = g_img_mgmt_state.size,
 				};
 
-				if (flash_img_check(&ctx, &fic, g_img_mgmt_state.area_id) == 0) {
+				if (flash_img_check(&ctx, &fic, g_img_mgmt_state.area) == 0) {
 					data_match = true;
 				} else {
 					LOG_ERR("Uploaded image sha256 hash verification failed");

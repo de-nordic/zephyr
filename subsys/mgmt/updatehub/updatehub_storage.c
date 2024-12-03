@@ -35,7 +35,7 @@ int updatehub_storage_init(struct updatehub_storage_context *ctx,
 		return -EIO;
 	}
 
-	return flash_img_init(&ctx->flash_ctx);
+	return flash_img_init_default(&ctx->flash_ctx);
 }
 
 int updatehub_storage_write(struct updatehub_storage_context *ctx,

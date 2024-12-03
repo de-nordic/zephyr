@@ -198,18 +198,16 @@ int img_mgmt_get_next_boot_slot(int image, enum img_mgmt_next_boot_type *type)
 static int read_directxip_state(int slot)
 {
 	struct boot_swap_state bss;
-	int fa_id = img_mgmt_flash_area_id(slot);
-	const struct flash_area *fa;
+	const struct flash_area *fa = img_mgmt_flash_area(slot);
 	int rc = 0;
 
 	__ASSERT(fa_id != -1, "Could not map slot to area ID");
 
-	rc = flash_area_open(fa_id, &fa);
-	if (rc < 0) {
-		return rc;
+	if (!flash_area_device_is_ready(fa)) {
+		return -ENODEV;
 	}
+
 	rc = boot_read_swap_state(fa, &bss);
-	flash_area_close(fa);
 	if (rc != 0) {
 		LOG_ERR("Failed to read state of slot %d with error %d", slot, rc);
 		return -1;
@@ -543,11 +541,10 @@ img_mgmt_state_read(struct smp_streamer *ctxt)
 
 static int img_mgmt_set_next_boot_slot_common(int slot, int active_slot, bool confirm)
 {
-	const struct flash_area *fa;
-	int area_id = img_mgmt_flash_area_id(slot);
+	const struct flash_area *fa = img_mgmt_flash_area(slot);
 	int rc = 0;
 
-	if (flash_area_open(area_id, &fa) != 0) {
+	if (!flash_area_device_is_ready(fa)) {
 		return IMG_MGMT_ERR_FLASH_OPEN_FAILED;
 	}
 
@@ -569,7 +566,6 @@ static int img_mgmt_set_next_boot_slot_common(int slot, int active_slot, bool co
 			rc = IMG_MGMT_ERR_UNKNOWN;
 		}
 	}
-	flash_area_close(fa);
 
 #if defined(CONFIG_MCUMGR_GRP_IMG_STATUS_HOOKS)
 	if (rc == 0 && slot == active_slot && confirm) {

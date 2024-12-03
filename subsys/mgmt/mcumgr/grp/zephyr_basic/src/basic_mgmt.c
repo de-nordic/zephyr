@@ -16,30 +16,22 @@
 LOG_MODULE_REGISTER(mcumgr_zbasic_grp, CONFIG_MCUMGR_GRP_ZBASIC_LOG_LEVEL);
 
 #define ERASE_TARGET		storage_partition
-#define ERASE_TARGET_ID		FIXED_PARTITION_ID(ERASE_TARGET)
 
 static int storage_erase(void)
 {
-	const struct flash_area *fa;
-	int rc = flash_area_open(ERASE_TARGET_ID, &fa);
+	const struct flash_area *fa = FIXED_PARTITION(ERASE_TARGET);
+	int rc;
 
-	if (rc < 0) {
+	if (!flash_area_device_is_ready(fa)) {
 		LOG_ERR("Failed to open flash area");
 		rc = ZEPHYRBASIC_MGMT_ERR_FLASH_OPEN_FAILED;
 	} else {
-		if (flash_area_get_device(fa) == NULL) {
-			LOG_ERR("Failed to get flash area device");
-			rc = ZEPHYRBASIC_MGMT_ERR_FLASH_CONFIG_QUERY_FAIL;
-		} else {
-			rc = flash_area_flatten(fa, 0, fa->fa_size);
+		rc = flash_area_flatten(fa, 0, fa->fa_size);
 
-			if (rc < 0) {
-				LOG_ERR("Failed to erase flash area");
-				rc = ZEPHYRBASIC_MGMT_ERR_FLASH_ERASE_FAILED;
-			}
+		if (rc < 0) {
+			LOG_ERR("Failed to erase flash area");
+			rc = ZEPHYRBASIC_MGMT_ERR_FLASH_ERASE_FAILED;
 		}
-
-		flash_area_close(fa);
 	}
 
 	return rc;

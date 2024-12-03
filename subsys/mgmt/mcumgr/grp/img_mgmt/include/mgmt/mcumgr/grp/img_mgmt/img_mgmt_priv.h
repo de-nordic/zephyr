@@ -208,7 +208,7 @@ int img_mgmt_find_by_hash(uint8_t *find, struct image_version *ver);
 int img_mgmt_find_by_ver(struct image_version *find, uint8_t *hash);
 int img_mgmt_state_read(struct smp_streamer *ctxt);
 int img_mgmt_state_write(struct smp_streamer *njb);
-int img_mgmt_flash_area_id(int slot);
+const struct flash_area *img_mgmt_flash_area(int slot);
 
 #ifdef __cplusplus
 }
