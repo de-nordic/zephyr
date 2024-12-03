@@ -50,11 +50,11 @@ struct flash_img_check {
  * @brief Initialize context needed for writing the image to the flash.
  *
  * @param ctx     context to be initialized
- * @param area_id flash area id of partition where the image should be written
+ * @param area    flash area of partition where the image should be written
  *
  * @return  0 on success, negative errno code on fail
  */
-int flash_img_init_id(struct flash_img_context *ctx, uint8_t area_id);
+int flash_img_init(struct flash_img_context *ctx, const struct flash_area *area);
 
 /**
  * @brief Initialize context needed for writing the image to the flash.
@@ -63,7 +63,7 @@ int flash_img_init_id(struct flash_img_context *ctx, uint8_t area_id);
  *
  * @return  0 on success, negative errno code on fail
  */
-int flash_img_init(struct flash_img_context *ctx);
+int flash_img_init_default(struct flash_img_context *ctx);
 
 /**
  * @brief Read number of bytes of the image written to the flash.
@@ -99,18 +99,19 @@ int flash_img_buffered_write(struct flash_img_context *ctx, const uint8_t *data,
  * start point is indicated by an offset value.
  *
  * The function is enabled via CONFIG_IMG_ENABLE_IMAGE_CHECK Kconfig options.
+ * Note: the function uses @p ctx only for context allocated buffer and
+ * should not be involved on context that is actively being used for actual
+ * flash image write; it can use such context only if it has been already
+ * flushed to a device and is no longer needed.
  *
- * @param[in] ctx context.
+ * @param[in,out] ctx context used for buffer allocation
  * @param[in] fic flash img check data.
- * @param[in] area_id flash area id of partition where the image should be
- * verified.
+ * @param[in] area flash area to be verified.
  *
  * @return  0 on success, negative errno code on fail
  */
-int flash_img_check(struct flash_img_context *ctx,
-		    const struct flash_img_check *fic,
-		    uint8_t area_id);
-
+int flash_img_check(struct flash_img_context *ctx, const struct flash_img_check *fic,
+		    const struct flash_area *area);
 #ifdef __cplusplus
 }
 #endif
