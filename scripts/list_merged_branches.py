@@ -56,7 +56,7 @@ def check_remote_exists(remote: str) -> bool:
         output = run_git_command(['remote'])
         remotes = [r.strip() for r in output.split('\n') if r.strip()]
         return remote in remotes
-    except:
+    except Exception:
         return False
 
 
@@ -77,7 +77,7 @@ def get_merged_branches(remote: str, upstream_branch: str) -> Set[str]:
         ])
         merged = set(b.strip() for b in output.split('\n') if b.strip())
         return merged
-    except:
+    except Exception:
         return set()
 
 
@@ -85,7 +85,7 @@ def get_current_branch() -> str:
     """Get the name of the current branch."""
     try:
         return run_git_command(['branch', '--show-current'])
-    except:
+    except Exception:
         return ""
 
 
@@ -130,7 +130,7 @@ def main():
         print(f"Fetching from {args.remote}...", file=sys.stderr)
         try:
             run_git_command(['fetch', args.remote])
-        except:
+        except Exception:
             print(f"Warning: Failed to fetch from {args.remote}", file=sys.stderr)
     
     # Get branches to check
